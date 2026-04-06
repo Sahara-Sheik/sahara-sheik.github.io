@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Visual Proprioception Visualizations</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;font-family:'JetBrains Mono','Courier New',monospace;
+        color:#ccc;min-height:100vh;display:flex;flex-direction:column;
+        align-items:center;padding:60px 40px}
+  h1{color:#F72585;font-size:48px;font-weight:800;text-shadow:0 0 50px #F72585aa;
+      margin-bottom:6px;text-align:center}
+  .sub{color:#4CC9F0;font-size:17px;letter-spacing:4px;margin-bottom:4px;text-align:center}
+  .paper{color:#4CC9F033;font-size:16px;letter-spacing:2px;margin-bottom:44px;text-align:center}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:960px;width:100%}
+  .card{background:rgba(4,15,35,.8);border:1px solid #1a3a5c;padding:24px;
+         cursor:pointer;transition:all .22s;text-decoration:none;display:block;position:relative}
+  .card:hover{border-color:#F72585;transform:translateY(-2px);
+               box-shadow:0 8px 36px rgba(247,37,133,.13)}
+  .cnum{color:#F72585;font-size:14px;letter-spacing:3px;text-transform:uppercase;
+         margin-bottom:8px;opacity:.7}
+  .ctitle{color:#fff;font-size:25px;font-weight:700;letter-spacing:1px;margin-bottom:6px}
+  .csub{color:#4CC9F077;font-size:14px;letter-spacing:2px;text-transform:uppercase}
+  .cicon{position:absolute;right:18px;top:50%;transform:translateY(-50%);
+          font-size:36px;opacity:.07}
+  footer{margin-top:44px;color:#1a3a5c;font-size:14px;letter-spacing:3px;text-align:center;
+          text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="sub">ICRA 2026 Workshop</div>
+<h1>Visual Proprioception</h1>
+<div class="paper">Generalizing Visual Proprioception for Multiple Robot Configurations</div>
+<div class="grid">
+
+  <a href="manhattan_AL5D.html" class="card">
+    <div class="cnum">Manhattan 3D</div>
+    <div class="ctitle">AL5D (Real 6-DOF)</div>
+    <div class="csub">6-DOF · RMSE per joint</div>
+    <div class="cicon">▦</div>
+  </a>
+  <a href="spider_AL5D.html" class="card">
+    <div class="cnum">Encoder Battle</div>
+    <div class="ctitle">AL5D (Real 6-DOF)</div>
+    <div class="csub">6-DOF · RMSE per joint</div>
+    <div class="cicon">◎</div>
+  </a>
+  <a href="tracking_AL5D.html" class="card">
+    <div class="cnum">Live Tracking</div>
+    <div class="ctitle">AL5D (Real 6-DOF)</div>
+    <div class="csub">6-DOF · RMSE per joint</div>
+    <div class="cicon">≋</div>
+  </a>
+  <a href="manhattan_Unitree_G1.html" class="card">
+    <div class="cnum">Manhattan 3D</div>
+    <div class="ctitle">Unitree G1 (Sim 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">▦</div>
+  </a>
+  <a href="spider_Unitree_G1.html" class="card">
+    <div class="cnum">Encoder Battle</div>
+    <div class="ctitle">Unitree G1 (Sim 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">◎</div>
+  </a>
+  <a href="tracking_Unitree_G1.html" class="card">
+    <div class="cnum">Live Tracking</div>
+    <div class="ctitle">Unitree G1 (Sim 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">≋</div>
+  </a>
+  <a href="manhattan_Franka_Panda.html" class="card">
+    <div class="cnum">Manhattan 3D</div>
+    <div class="ctitle">Franka Panda (Real 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">▦</div>
+  </a>
+  <a href="spider_Franka_Panda.html" class="card">
+    <div class="cnum">Encoder Battle</div>
+    <div class="ctitle">Franka Panda (Real 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">◎</div>
+  </a>
+  <a href="tracking_Franka_Panda.html" class="card">
+    <div class="cnum">Live Tracking</div>
+    <div class="ctitle">Franka Panda (Real 7-DOF)</div>
+    <div class="csub">7-DOF · RMSE per joint</div>
+    <div class="cicon">≋</div>
+  </a>
+  <a href="transfer_globe.html" class="card">
+    <div class="cnum">Cross-Robot Transfer</div>
+    <div class="ctitle">Transfer Globe</div>
+    <div class="csub">G1 ↔ Franka · arc diagram</div>
+    <div class="cicon">⊙</div>
+  </a>
+  <a href="summary.html" class="card" style="border-color:#7BF1A830">
+    <div class="cnum" style="color:#7BF1A8">All Robots — Overview</div>
+    <div class="ctitle">Encoder Battle Dashboard</div>
+    <div class="csub">All robots · winners per joint · animated radars</div>
+    <div class="cicon">◈</div>
+  </a>
+  <a href="heatmap.html" class="card" style="border-color:#FFD60A30">
+    <div class="cnum" style="color:#FFD60A">All Encoders × All Joints</div>
+    <div class="ctitle">Grand Heatmap</div>
+    <div class="csub">Full RMSE matrix · ★ = best per joint</div>
+    <div class="cicon">▦</div>
+  </a>
+  <a href="leaderboard.html" class="card" style="border-color:#FFD70030">
+    <div class="cnum" style="color:#FFD700">Total Joint Wins</div>
+    <div class="ctitle">Encoder Leaderboard</div>
+    <div class="csub">Ranked across all robots · podium · breakdown</div>
+    <div class="cicon">🏆</div>
+  </a>
+  <a href="transfer_cost.html" class="card" style="border-color:#F7258530">
+    <div class="cnum" style="color:#F72585">Transfer Analysis</div>
+    <div class="ctitle">Transfer Cost Panel</div>
+    <div class="csub">Own vs transferred RMSE · delta per encoder</div>
+    <div class="cicon">→</div>
+  </a>
+  <a href="bump_chart.html" class="card" style="border-color:#9b72ff30">
+    <div class="cnum" style="color:#9b72ff">Rank Across Robots</div>
+    <div class="ctitle">Ranking Flow</div>
+    <div class="csub">Encoder positions shift across robot configs</div>
+    <div class="cicon">∿</div>
+  </a>
+  <a href="constellation.html" class="card" style="border-color:#4CC9F030">
+    <div class="cnum" style="color:#4CC9F0">Galaxy Map</div>
+    <div class="ctitle">Constellation</div>
+    <div class="csub">Robots as clusters · brightness = accuracy</div>
+    <div class="cicon">✦</div>
+  </a>
+  <a href="model_showcase.html" class="card" style="border-color:#7BF1A830;grid-column:span 1">
+    <div class="cnum" style="color:#7BF1A8">Per-Encoder Deep Dive</div>
+    <div class="ctitle">Model Showcase</div>
+    <div class="csub">Full RMSE table per encoder · auto-cycles · all robots</div>
+    <div class="cicon">⊞</div>
+  </a>
+  <a href="dataset_radar.html" class="card" style="border-color:#F7258530">
+    <div class="cnum" style="color:#F72585">Per-Robot Radar</div>
+    <div class="ctitle">Dataset Radar</div>
+    <div class="csub">One big radar per robot · all encoders · auto-cycles</div>
+    <div class="cicon">◎</div>
+  </a>
+</div>
+<footer>Data loaded from your CSV files · All values real · No hardcoding</footer>
+</body>
+</html>

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Joint Heatmap · DOF Error Thermal View</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&family=Orbitron:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono',monospace;color:#8899aa}
+
+  #container{display:flex;width:100vw;height:100vh}
+  .view-panel{flex:1;position:relative;overflow:hidden}
+  .view-panel canvas{width:100%;height:100%;display:block}
+  #divider{width:2px;background:linear-gradient(to bottom,transparent,#1a3a5c,transparent);flex-shrink:0}
+
+  .view-label{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:4px;color:#2a5a7a;text-transform:uppercase;z-index:5;text-align:center}
+  .view-label .cam-name{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;margin-top:2px}
+  #panel-left .cam-name{color:#4CC9F0}
+  #panel-right .cam-name{color:#06D6A0}
+
+  /* Header */
+  #header{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:20;text-align:center;padding:10px 40px;background:linear-gradient(180deg,rgba(2,8,16,.95),transparent);pointer-events:none}
+  #header .sup{font-size:9px;letter-spacing:6px;color:#1a3a5c;text-transform:uppercase}
+  #header .title{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;color:#FFB703;text-shadow:0 0 20px #FFB70366}
+  #header .sub{font-size:10px;letter-spacing:3px;color:#4CC9F0;margin-top:2px}
+
+  /* Controls */
+  #ctrl{position:fixed;top:10px;right:10px;z-index:20;display:flex;flex-direction:column;gap:3px;pointer-events:all}
+  .cbtn{padding:5px 8px;font-size:8px;letter-spacing:2px;font-family:inherit;cursor:pointer;background:rgba(255,255,255,.015);color:#2a5a7a;border:1px solid #0d2a44;transition:all .2s}
+  .cbtn:hover{border-color:#4CC9F0;color:#4CC9F0}
+  .cbtn.active{background:rgba(255,183,3,.08);color:#FFB703;border-color:#FFB703}
+
+  /* Color scale */
+  #colorscale{position:fixed;bottom:50px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:8px;pointer-events:none}
+  #gradient-bar{width:200px;height:10px;border-radius:5px;background:linear-gradient(to right,#06D6A0,#FFB703,#F72585,#ff2200);border:1px solid #1a3a5c}
+  .scale-label{font-size:9px;letter-spacing:2px;color:#2a5a7a}
+
+  /* DOF detail cards */
+  #dof-cards{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;pointer-events:none}
+  .dcard{background:rgba(2,8,16,.9);border:1px solid #0d2a44;padding:6px 10px;text-align:center;min-width:85px}
+  .dcard .dname{font-size:7px;letter-spacing:2px;color:#2a5a7a;text-transform:uppercase}
+  .dcard .derr{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;margin-top:2px}
+  .dcard .dbar{height:3px;margin-top:4px;border-radius:2px;transition:all .3s}
+
+  /* Model toggle */
+  #model-toggle{position:fixed;top:10px;left:10px;z-index:20;display:flex;flex-direction:column;gap:4px;pointer-events:all}
+  .mtbtn{padding:6px 12px;font-size:9px;letter-spacing:2px;font-family:inherit;cursor:pointer;border:1px solid;transition:all .2s;text-transform:uppercase}
+  .mtbtn.sv{background:rgba(67,97,238,.1);color:#4361EE;border-color:#4361EE44}
+  .mtbtn.sv.active{background:rgba(67,97,238,.2);border-color:#4361EE;box-shadow:0 0 8px #4361EE33}
+  .mtbtn.mv{background:rgba(247,37,133,.1);color:#F72585;border-color:#F7258544}
+  .mtbtn.mv.active{background:rgba(247,37,133,.2);border-color:#F72585;box-shadow:0 0 8px #F7258533}
+
+  #frame-num{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:20;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;color:#1a3a5c}
+</style>
+</head>
+<body>
+
+<div id="container">
+  <div id="panel-left" class="view-panel">
+    <canvas id="c-left"></canvas>
+    <div class="view-label">CAMERA VIEW<div class="cam-name">SIDE-RIGHT</div></div>
+  </div>
+  <div id="divider"></div>
+  <div id="panel-right" class="view-panel">
+    <canvas id="c-right"></canvas>
+    <div class="view-label">CAMERA VIEW<div class="cam-name">FRONT-TOP</div></div>
+  </div>
+</div>
+
+<div id="header">
+  <div class="sup">Visual Proprioception · Error Heatmap</div>
+  <div class="title">JOINT THERMAL MAP</div>
+  <div class="sub">PER-DOF ERROR MAPPED TO JOINT COLOR &nbsp;·&nbsp; TWO CAMERA VIEWS</div>
+</div>
+
+<div id="ctrl">
+  <button class="cbtn active" onclick="togglePlay()">▶ PLAY</button>
+  <button class="cbtn" onclick="setSpeed(.3)">SLOW</button>
+  <button class="cbtn active" onclick="setSpeed(1)">1×</button>
+  <button class="cbtn" onclick="setSpeed(2)">2×</button>
+</div>
+
+<div id="model-toggle">
+  <button class="mtbtn sv" onclick="setModel('sv')">SINGLE-VIEW</button>
+  <button class="mtbtn mv active" onclick="setModel('mv')">MULTI-VIEW</button>
+</div>
+
+<div id="colorscale">
+  <span class="scale-label" style="color:#06D6A0">LOW</span>
+  <div id="gradient-bar"></div>
+  <span class="scale-label" style="color:#ff2200">HIGH</span>
+</div>
+
+<div id="dof-cards"></div>
+<div id="frame-num">FRAME <span id="fnum">0</span></div>
+
+<script>
+const N=300;
+const DOF_NAMES=['Height','Distance','Heading','Wr.Angle','Wr.Rot','Gripper'];
+const DOF_HEX=['#4CC9F0','#06D6A0','#FFB703','#F72585','#4361EE','#B5179E'];
+
+// Generate demo data
+function genData(){
+  const gt=[],sv=[],mv=[];
+  for(let i=0;i<N;i++){
+    const t=i/N*Math.PI*6;
+    const g=[.3+.22*Math.sin(t),.4+.28*Math.sin(t*.7+1),.5+.32*Math.sin(t*.5+2),
+      .4+.18*Math.cos(t*.8),.5+.18*Math.sin(t*1.2+.5),.3+.22*Math.abs(Math.sin(t*.3))];
+    gt.push(g);
+    sv.push(g.map((v,d)=>v+(Math.random()-.5)*[.14,.16,.08,.10,.20,.16][d]));
+    mv.push(g.map((v,d)=>v+(Math.random()-.5)*[.06,.08,.06,.06,.14,.10][d]));
+  }
+  return{gt,sv,mv};
+}
+const D=genData();
+
+// DOF cards
+const cardsEl=document.getElementById('dof-cards');
+const dcards=[];
+DOF_NAMES.forEach((name,i)=>{
+  const d=document.createElement('div');
+  d.className='dcard';
+  d.innerHTML=`<div class="dname" style="color:${DOF_HEX[i]}">${name}</div><div class="derr" id="derr-${i}">0.00</div><div class="dbar" id="dbar-${i}"></div>`;
+  cardsEl.appendChild(d);
+  dcards.push(d);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ERROR TO COLOR (thermal palette)
+// ═══════════════════════════════════════════════════════════════
+function errorToColor(err, maxErr=0.12){
+  const t=Math.min(err/maxErr,1);
+  const c=new THREE.Color();
+  if(t<.33) c.setRGB(.024+t*2*.8,.84-t*.5,.63-t*1.2);      // green → yellow
+  else if(t<.66) c.setRGB(.97,.72-t*1.1,.15-t*.2);           // yellow → orange-red
+  else c.setRGB(1,.13-.1*(t-.66),.0);                          // red → deep red
+  return c;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BUILD HEATMAP ARM — each segment colored by its DOF error
+// ═══════════════════════════════════════════════════════════════
+function buildHeatmapArm(scene){
+  const arm={group:new THREE.Group(),segments:[]};
+
+  // Each segment has its own material that we'll update
+  function makeSeg(geo){
+    const mat=new THREE.MeshStandardMaterial({color:0x06D6A0,emissive:0x06D6A0,emissiveIntensity:.5,metalness:.4,roughness:.35});
+    const mesh=new THREE.Mesh(geo,mat);
+    arm.segments.push(mesh);
+    return mesh;
+  }
+
+  // Base (DOF: heading)
+  const base=makeSeg(new THREE.CylinderGeometry(.36,.42,.1,24));
+  arm.group.add(base);
+
+  // Turret (DOF: heading)
+  const turret=new THREE.Group();turret.position.y=.1;arm.group.add(turret);
+  const turretSeg=makeSeg(new THREE.SphereGeometry(.14,16,16));
+  turret.add(turretSeg);
+
+  // Upper arm (DOF: height + distance)
+  const upper=new THREE.Group();upper.position.y=.14;turret.add(upper);
+  const upperSeg=makeSeg(new THREE.CylinderGeometry(.07,.08,.72,12));
+  upperSeg.position.y=.36;upper.add(upperSeg);
+
+  // Elbow joint (DOF: distance)
+  const elbow=new THREE.Group();elbow.position.y=.74;upper.add(elbow);
+  const elbowSeg=makeSeg(new THREE.SphereGeometry(.11,12,12));
+  elbow.add(elbowSeg);
+
+  // Lower arm (DOF: wrist angle)
+  const lower=new THREE.Group();lower.position.y=.09;elbow.add(lower);
+  const lowerSeg=makeSeg(new THREE.CylinderGeometry(.06,.07,.56,12));
+  lowerSeg.position.y=.28;lower.add(lowerSeg);
+
+  // Wrist (DOF: wrist rotation)
+  const wrist=new THREE.Group();wrist.position.y=.6;lower.add(wrist);
+  const wristSeg=makeSeg(new THREE.SphereGeometry(.09,12,12));
+  wrist.add(wristSeg);
+
+  // Gripper (DOF: gripper)
+  const grip=new THREE.Group();grip.position.y=.07;wrist.add(grip);
+  const fl=makeSeg(new THREE.BoxGeometry(.035,.16,.025));fl.position.set(-.06,.08,0);grip.add(fl);
+  const fr=makeSeg(new THREE.BoxGeometry(.035,.16,.025));fr.position.set(.06,.08,0);grip.add(fr);
+
+  arm.turret=turret;arm.upper=upper;arm.elbow=elbow;arm.lower=lower;
+  arm.wrist=wrist;arm.grip=grip;arm.fl=fl;arm.fr=fr;
+
+  // DOF → segment mapping
+  // segments: [base, turretSphere, upperCyl, elbowSphere, lowerCyl, wristSphere, fingerL, fingerR]
+  // DOFs:     [height=0, distance=1, heading=2, wristAngle=3, wristRot=4, gripper=5]
+  arm.dofToSegments=[
+    [2],    // base → heading
+    [2],    // turret → heading
+    [0,1],  // upper arm → height + distance
+    [1],    // elbow → distance
+    [3],    // lower arm → wrist angle
+    [4],    // wrist → wrist rotation
+    [5],    // finger L → gripper
+    [5],    // finger R → gripper
+  ];
+
+  scene.add(arm.group);
+  return arm;
+}
+
+function poseHeatmapArm(arm,dofs){
+  const[h,dist,hdg,wa,wr,gr]=dofs;
+  arm.turret.rotation.y=(hdg-.5)*Math.PI*1.2;
+  arm.upper.rotation.z=(dist-.5)*-.6;
+  arm.upper.position.y=.14+(h-.5)*.3;
+  arm.elbow.rotation.z=(wa-.5)*-.8;
+  arm.wrist.rotation.y=(wr-.5)*Math.PI;
+  const spread=.03+gr*.06;arm.fl.position.x=-spread;arm.fr.position.x=spread;
+}
+
+function updateHeatmapColors(arm, predDofs, gtDofs){
+  const errs=predDofs.map((v,i)=>Math.abs(v-gtDofs[i]));
+
+  arm.segments.forEach((seg,si)=>{
+    const relevantDofs=arm.dofToSegments[si];
+    // Average error of relevant DOFs
+    const avgErr=relevantDofs.reduce((s,d)=>s+errs[d],0)/relevantDofs.length;
+    const c=errorToColor(avgErr);
+    seg.material.color.copy(c);
+    seg.material.emissive.copy(c);
+    seg.material.emissiveIntensity=.3+Math.min(avgErr*5,1)*1.2;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TWO SCENES — SIDE-RIGHT and FRONT-TOP camera views
+// ═══════════════════════════════════════════════════════════════
+function createViewScene(canvasId, cameraPos, lookAt){
+  const canvas=document.getElementById(canvasId);
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.4;
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x020810);
+  scene.fog=new THREE.FogExp2(0x020810,.06);
+
+  const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+  camera.position.set(...cameraPos);
+  camera.lookAt(...lookAt);
+
+  scene.add(new THREE.AmbientLight(0x0a1830,2));
+  const dl=new THREE.DirectionalLight(0x6688aa,1.5);dl.position.set(3,6,3);scene.add(dl);
+  const pl=new THREE.PointLight(0xFFB703,1.5,12);pl.position.set(1,3,1);scene.add(pl);
+
+  // Ground
+  const gnd=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshStandardMaterial({color:0x030a14,metalness:.9,roughness:.8}));
+  gnd.rotation.x=-Math.PI/2;scene.add(gnd);
+
+  // Grid
+  const pts=[];for(let i=-5;i<=5;i+=.5){pts.push(-5,.001,i,5,.001,i,i,.001,-5,i,.001,5)}
+  const gGeo=new THREE.BufferGeometry();gGeo.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+  scene.add(new THREE.LineSegments(gGeo,new THREE.LineBasicMaterial({color:0x0a1a2a,transparent:true,opacity:.2})));
+
+  const arm=buildHeatmapArm(scene);
+
+  // Camera label sprite (SIDE-RIGHT / FRONT-TOP indicator)
+  // We'll just use the DOM labels
+
+  return{renderer,scene,camera,canvas,arm};
+}
+
+// SIDE-RIGHT camera: viewing from the right side
+const sideView=createViewScene('c-left',[2.8,1.2,0],[0,.6,0]);
+// FRONT-TOP camera: viewing from front-above
+const frontView=createViewScene('c-right',[0,2.8,2.2],[0,.5,0]);
+
+function resize(){
+  const w=innerWidth/2,h=innerHeight;
+  [sideView,frontView].forEach(v=>{
+    v.renderer.setSize(w,h);
+    v.camera.aspect=w/h;
+    v.camera.updateProjectionMatrix();
+  });
+}
+resize();window.addEventListener('resize',resize);
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let frame=0,playing=true,speed=1,currentModel='mv';
+let accumulator=0;
+
+function togglePlay(){playing=!playing}
+function setSpeed(s){speed=s}
+function setModel(m){
+  currentModel=m;
+  document.querySelectorAll('.mtbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.mtbtn.${m}`).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATE
+// ═══════════════════════════════════════════════════════════════
+const clock=new THREE.Clock();
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=clock.getDelta();
+  const time=clock.getElapsedTime();
+
+  if(playing){
+    accumulator+=dt*18*speed;
+    if(accumulator>=1){frame=(frame+Math.floor(accumulator))%N;accumulator%=1}
+  }
+
+  const f=frame;
+  const gt=D.gt[f];
+  const pred=currentModel==='sv'?D.sv[f]:D.mv[f];
+
+  // Pose + color both views
+  [sideView,frontView].forEach(v=>{
+    poseHeatmapArm(v.arm,pred);
+    updateHeatmapColors(v.arm,pred,gt);
+  });
+
+  // Update DOF cards
+  for(let d=0;d<6;d++){
+    const err=Math.abs(pred[d]-gt[d]);
+    const c=errorToColor(err);
+    const hex='#'+c.getHexString();
+    document.getElementById(`derr-${d}`).textContent=err.toFixed(3);
+    document.getElementById(`derr-${d}`).style.color=hex;
+    document.getElementById(`dbar-${d}`).style.background=hex;
+    document.getElementById(`dbar-${d}`).style.width=Math.min(err/.12*100,100)+'%';
+  }
+
+  document.getElementById('fnum').textContent=f;
+
+  // Gentle camera wobble
+  const wobble=Math.sin(time*.3)*.08;
+  sideView.camera.position.y=1.2+wobble;
+  frontView.camera.position.y=2.8+wobble;
+
+  sideView.renderer.render(sideView.scene,sideView.camera);
+  frontView.renderer.render(frontView.scene,frontView.camera);
+}
+animate();
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Model Showcase — RMSE per Encoder</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020810;font-family:'JetBrains Mono','Courier New',monospace;
+      color:#ccc;overflow:hidden;height:100vh;width:100vw}
+#stage{position:fixed;inset:0;display:flex;flex-direction:column}
+#header{padding:24px 36px 14px;flex-shrink:0;border-bottom:1px solid #1a3a5c22}
+#model-name{font-size:44px;font-weight:800;letter-spacing:2px;
+             text-shadow:0 0 40px currentColor;transition:color .4s}
+#model-sub{font-size:18px;letter-spacing:4px;color:rgba(76,201,240,.6);
+            text-transform:uppercase;margin-top:4px}
+#wins-badge{display:inline-block;padding:4px 16px;font-size:15px;font-weight:700;
+             letter-spacing:2px;border:1px solid;border-radius:2px;margin-top:8px}
+#table-area{flex:1;overflow:hidden;display:flex;gap:0;padding:10px 0 0}
+.robot-col{flex:1;padding:0 18px;border-right:1px solid #1a3a5c22;display:flex;flex-direction:column}
+.robot-col:last-child{border-right:none}
+.robot-label{font-size:15px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+              color:rgba(76,201,240,.7);padding-bottom:8px;border-bottom:1px solid #1a3a5c33;
+              margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jrow{display:flex;justify-content:space-between;align-items:center;
+       padding:5px 8px;margin:2px 0;border-radius:2px;transition:background .3s}
+.jrow.best{background:rgba(123,241,168,.10);border-left:3px solid #7BF1A8}
+.jrow.nonmov{opacity:.3;font-style:italic}
+.jname{font-size:17px;white-space:nowrap}
+.jval{font-size:20px;font-weight:700}
+.jval.best{color:#7BF1A8}
+.jval.missing{color:#333;font-size:14px}
+#progress-bar{height:4px;background:#1a3a5c;flex-shrink:0}
+#progress-fill{height:100%;width:0%;transition:width linear;}
+#controls{position:fixed;bottom:20px;right:28px;display:flex;gap:8px;z-index:20}
+.ctrl-btn{cursor:pointer;padding:8px 18px;font-size:14px;letter-spacing:2px;
+           text-transform:uppercase;border:1px solid #1a3a5c;background:transparent;
+           color:#4CC9F0;font-family:inherit;transition:all .2s}
+.ctrl-btn:hover{background:#4CC9F020;border-color:#4CC9F0}
+#dot-nav{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+           display:flex;gap:8px;z-index:20}
+.dot{width:8px;height:8px;border-radius:50%;background:#1a3a5c;
+      cursor:pointer;transition:all .3s}
+.dot.active{width:24px;border-radius:4px}
+#back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+       padding:6px 16px;font-size:14px;letter-spacing:2px;text-transform:uppercase;
+       border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+       font-family:inherit;transition:all .2s;text-decoration:none}
+#back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="stage">
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+  <div id="header">
+    <div id="model-name">—</div>
+    <div id="model-sub">RMSE per joint · all robots</div>
+    <div id="wins-badge">— wins</div>
+  </div>
+  <div id="table-area"></div>
+</div>
+<div id="dot-nav"></div>
+<div id="controls">
+  <button class="ctrl-btn" id="btn-prev">◀ prev</button>
+  <button class="ctrl-btn" id="btn-pause">⏸ pause</button>
+  <button class="ctrl-btn" id="btn-next">next ▶</button>
+</div>
+<script>
+const SHOWCASE = [{"model": "ptun-convvae-128", "color": "#ff6eb4", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.3014, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.2094, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.1453, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.233, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.3117, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.2916, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0516, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0896, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0883, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.063, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0004, "is_best": true, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0005, "is_best": true, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0001, "is_best": true, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.1165, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1892, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.0758, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1546, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.0981, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0006, "is_best": true, "nonmov": true}, {"name": "j7", "rmse": 0.1334, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1568, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1961, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2301, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.2109, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1083, "is_best": true, "nonmov": false}, {"name": "j6", "rmse": 0.0107, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1603, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.0369, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0822, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0952, "is_best": true, "nonmov": false}, {"name": "elbow", "rmse": 0.0386, "is_best": true, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0014, "is_best": true, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0006, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0001, "is_best": true, "nonmov": true}]}], "wins": 3, "moving": 26}, {"model": "ptun-convvae-256", "color": "#F72585", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.3522, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.133, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.1228, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.3341, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.3646, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.3504, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0302, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0739, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0802, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0411, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0043, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0045, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0006, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.1457, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1337, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2042, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1263, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1744, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0048, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.17, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.203, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1538, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2232, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.0974, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1464, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0064, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.2144, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.0358, "is_best": true, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0818, "is_best": true, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.1049, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0409, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.003, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0026, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0002, "is_best": false, "nonmov": true}]}], "wins": 2, "moving": 26}, {"model": "ptun-vgg19-128", "color": "#ffe57a", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.114, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.0879, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.0787, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.136, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.2524, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.2769, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0139, "is_best": true, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0259, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0239, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0164, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0095, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0072, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0054, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.0786, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1048, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.12, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1208, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.0997, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0204, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1032, "is_best": true, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1954, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1995, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1853, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.2206, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1381, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0213, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.2063, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.1108, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.1193, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.1262, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.1092, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0043, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0042, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0005, "is_best": false, "nonmov": true}]}], "wins": 2, "moving": 26}, {"model": "ptun-vgg19-256", "color": "#FFD60A", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.1386, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.1074, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.0784, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.1061, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.2942, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.2302, "is_best": true, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0191, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0218, "is_best": true, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0237, "is_best": true, "nonmov": false}, {"name": "elbow", "rmse": 0.0134, "is_best": true, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0091, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0084, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0045, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.0737, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.0968, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1099, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.0617, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1688, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0195, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1407, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1455, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1939, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2525, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1836, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.115, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0002, "is_best": true, "nonmov": true}, {"name": "j7", "rmse": 0.1872, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.085, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.1053, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.1144, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0909, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0022, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0017, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0004, "is_best": false, "nonmov": true}]}], "wins": 4, "moving": 26}, {"model": "ptun-resnet50-128", "color": "#b2f5d4", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.2504, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.2233, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.1277, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.2124, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.2639, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.3116, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0791, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0961, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0957, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0801, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0061, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0064, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0009, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.2065, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.2162, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1487, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.2019, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.0794, "is_best": true, "nonmov": false}, {"name": "j6", "rmse": 0.0007, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1488, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1729, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.2095, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2067, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.136, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1259, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0046, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1474, "is_best": true, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.1919, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.153, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.145, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.1795, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0044, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.012, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0091, "is_best": false, "nonmov": true}]}], "wins": 2, "moving": 26}, {"model": "ptun-resnet50-256", "color": "#7BF1A8", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.2602, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.1648, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.1097, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.2061, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.2449, "is_best": true, "nonmov": false}, {"name": "gripper", "rmse": 0.307, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0613, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0927, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0987, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0677, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0034, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0063, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0007, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.2041, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1461, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.2388, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1804, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1447, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0008, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.2343, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.2083, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.2142, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1948, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1726, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1261, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0039, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1827, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.1874, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.1523, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.144, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.1812, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.007, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0006, "is_best": true, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0004, "is_best": false, "nonmov": true}]}], "wins": 1, "moving": 26}, {"model": "ptun-vit-base-128", "color": "#9ee7ff", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.1155, "is_best": false, "nonmov": false}, {"name": "distance", "rmse": 0.0767, "is_best": true, "nonmov": false}, {"name": "heading", "rmse": 0.0619, "is_best": true, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.1083, "is_best": false, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.3243, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.2869, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0287, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0508, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0586, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0358, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0043, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0034, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0008, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.058, "is_best": true, "nonmov": false}, {"name": "j2", "rmse": 0.0509, "is_best": true, "nonmov": false}, {"name": "j3", "rmse": 0.0739, "is_best": true, "nonmov": false}, {"name": "j4", "rmse": 0.1452, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1527, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0219, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1941, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1127, "is_best": true, "nonmov": false}, {"name": "j2", "rmse": 0.1308, "is_best": true, "nonmov": false}, {"name": "j3", "rmse": 0.1348, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.1028, "is_best": false, "nonmov": false}, {"name": "j5", "rmse": 0.1544, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0016, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.2341, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.089, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.1208, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.1479, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.1084, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0016, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0017, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0006, "is_best": false, "nonmov": true}]}], "wins": 7, "moving": 26}, {"model": "ptun-vit-base-256", "color": "#4CC9F0", "robots": [{"robot": "AL5D", "joints": [{"name": "height", "rmse": 0.1127, "is_best": true, "nonmov": false}, {"name": "distance", "rmse": 0.0789, "is_best": false, "nonmov": false}, {"name": "heading", "rmse": 0.0772, "is_best": false, "nonmov": false}, {"name": "wrist_angle", "rmse": 0.0957, "is_best": true, "nonmov": false}, {"name": "wrist_rotation", "rmse": 0.28, "is_best": false, "nonmov": false}, {"name": "gripper", "rmse": 0.2846, "is_best": false, "nonmov": false}]}, {"robot": "Unitree G1", "joints": [{"name": "shoulder_pitch", "rmse": 0.0239, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.0376, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.0693, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0323, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0048, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0038, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.002, "is_best": false, "nonmov": true}]}, {"robot": "Franka Panda", "joints": [{"name": "j1", "rmse": 0.0677, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1015, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1052, "is_best": false, "nonmov": false}, {"name": "j4", "rmse": 0.0489, "is_best": true, "nonmov": false}, {"name": "j5", "rmse": 0.1709, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0029, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.1961, "is_best": false, "nonmov": false}]}, {"robot": "G1 \u2192 Franka Transfer", "joints": [{"name": "j1", "rmse": 0.1183, "is_best": false, "nonmov": false}, {"name": "j2", "rmse": 0.1787, "is_best": false, "nonmov": false}, {"name": "j3", "rmse": 0.1135, "is_best": true, "nonmov": false}, {"name": "j4", "rmse": 0.0787, "is_best": true, "nonmov": false}, {"name": "j5", "rmse": 0.1405, "is_best": false, "nonmov": false}, {"name": "j6", "rmse": 0.0384, "is_best": false, "nonmov": true}, {"name": "j7", "rmse": 0.2334, "is_best": false, "nonmov": false}]}, {"robot": "Franka \u2192 G1 Transfer", "joints": [{"name": "shoulder_pitch", "rmse": 0.0716, "is_best": false, "nonmov": false}, {"name": "shoulder_roll", "rmse": 0.1126, "is_best": false, "nonmov": false}, {"name": "shoulder_yaw", "rmse": 0.1336, "is_best": false, "nonmov": false}, {"name": "elbow", "rmse": 0.0887, "is_best": false, "nonmov": false}, {"name": "wrist_pitch", "rmse": 0.0034, "is_best": false, "nonmov": true}, {"name": "wrist_roll", "rmse": 0.0014, "is_best": false, "nonmov": true}, {"name": "wrist_yaw", "rmse": 0.0011, "is_best": false, "nonmov": true}]}], "wins": 5, "moving": 26}];
+
+
+const DWELL = 5000; // ms per model
+let cur = 0, paused = false, startTime = Date.now(), elapsed = 0;
+
+const nameEl    = document.getElementById('model-name');
+const badgeEl   = document.getElementById('wins-badge');
+const tableArea = document.getElementById('table-area');
+const fill      = document.getElementById('progress-fill');
+const dotNav    = document.getElementById('dot-nav');
+const pauseBtn  = document.getElementById('btn-pause');
+
+// Build dots
+SHOWCASE.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.addEventListener('click',()=>goTo(i));
+  dotNav.appendChild(d);
+});
+
+function goTo(idx){
+  cur=((idx%SHOWCASE.length)+SHOWCASE.length)%SHOWCASE.length;
+  render(SHOWCASE[cur]);
+  startTime=Date.now(); elapsed=0;
+  document.querySelectorAll('.dot').forEach((d,i)=>{
+    d.className='dot'+(i===cur?' active':'');
+    d.style.background=i===cur?SHOWCASE[cur].color:'';
+  });
+}
+
+function render(s){
+  nameEl.textContent=s.model;
+  nameEl.style.color=s.color;
+  fill.style.background=s.color;
+  badgeEl.textContent=`★ ${s.wins} wins / ${s.moving} moving joints`;
+  badgeEl.style.color=s.color;
+  badgeEl.style.borderColor=s.color+'66';
+  badgeEl.style.background=s.color+'11';
+  document.title=`${s.model} — Showcase`;
+
+  tableArea.innerHTML='';
+  s.robots.forEach(rb=>{
+    const col=document.createElement('div');
+    col.className='robot-col';
+    const lbl=document.createElement('div');
+    lbl.className='robot-label';
+    lbl.textContent=rb.robot;
+    col.appendChild(lbl);
+    rb.joints.forEach(j=>{
+      const row=document.createElement('div');
+      row.className='jrow'+(j.is_best&&!j.nonmov?' best':'')+(j.nonmov?' nonmov':'');
+      const jn=document.createElement('div');
+      jn.className='jname';
+      jn.textContent=j.name;
+      const jv=document.createElement('div');
+      jv.className='jval'+(j.is_best&&!j.nonmov?' best':'')+(j.rmse===null?' missing':'');
+      jv.textContent=j.rmse!==null?j.rmse.toFixed(4):'—';
+      row.appendChild(jn);row.appendChild(jv);
+      col.appendChild(row);
+    });
+    tableArea.appendChild(col);
+  });
+}
+
+// Progress animation
+function tick(){
+  if(!paused){
+    elapsed=Date.now()-startTime;
+    const frac=Math.min(1,elapsed/DWELL);
+    fill.style.width=(frac*100)+'%';
+    if(frac>=1){ goTo(cur+1); }
+  }
+  requestAnimationFrame(tick);
+}
+
+document.getElementById('btn-prev').addEventListener('click',()=>goTo(cur-1));
+document.getElementById('btn-next').addEventListener('click',()=>goTo(cur+1));
+pauseBtn.addEventListener('click',()=>{
+  paused=!paused;
+  pauseBtn.textContent=paused?'▶ play':'⏸ pause';
+  if(!paused)startTime=Date.now()-elapsed;
+});
+
+goTo(0);
+tick();
+</script>
+</body>
+</html>

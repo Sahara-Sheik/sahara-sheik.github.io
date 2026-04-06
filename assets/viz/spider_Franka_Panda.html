@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Encoder Battle — Franka Panda (Real 7-DOF)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  canvas{display:block}
+  #ui{position:fixed;top:20px;left:28px;z-index:20}
+  #ttl{color:#F72585;font-size:32px;font-weight:800;letter-spacing:2px;
+        text-shadow:0 0 30px #F72585aa;margin-bottom:6px}
+  #sub{color:#4CC9F0;font-size:16px;letter-spacing:4px;text-transform:uppercase;opacity:.7}
+  #back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+         padding:6px 16px;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+         border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+         font-family:inherit;transition:all .2s;text-decoration:none}
+  #back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+  #tip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);
+        border:1px solid #1a3a5c;padding:10px 14px;font-size:17px;color:#aaa;
+        min-width:160px;box-shadow:0 0 20px #4CC9F015;z-index:40;line-height:1.7}
+  #tip b{color:#F72585}
+  #tip em{color:#4CC9F0}
+  #tip strong{color:#7BF1A8;font-size:22px}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="ui"><div id="ttl">Encoder Battle — Franka Panda (Real 7-DOF)</div><div id="sub">Accuracy Score · Larger polygon = better · Click legend to isolate</div></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+
+const ROBOTS_LABEL = "Franka Panda (Real 7-DOF)";
+const MODELS   = ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"];
+const JOINTS   = ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"];
+const COLORS   = {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"};
+const MSE_RAW  = [[0.1165, 0.1892, 0.0758, 0.1546, 0.0981, 0.0006, 0.1334], [0.1457, 0.1337, 0.2042, 0.1263, 0.1744, 0.0048, 0.17], [0.0786, 0.1048, 0.12, 0.1208, 0.0997, 0.0204, 0.1032], [0.0737, 0.0968, 0.1099, 0.0617, 0.1688, 0.0195, 0.1407], [0.2065, 0.2162, 0.1487, 0.2019, 0.0794, 0.0007, 0.1488], [0.2041, 0.1461, 0.2388, 0.1804, 0.1447, 0.0008, 0.2343], [0.058, 0.0509, 0.0739, 0.1452, 0.1527, 0.0219, 0.1941], [0.0677, 0.1015, 0.1052, 0.0489, 0.1709, 0.0029, 0.1961]];
+const MSE_INV  = [[0.6061, 0.1633, 0.9885, 0.3092, 0.8032, 1.0, 0.7696], [0.4094, 0.4991, 0.2098, 0.4941, 0.0, 0.8028, 0.4905], [0.8613, 0.6739, 0.7204, 0.5301, 0.7863, 0.0704, 1.0], [0.8943, 0.7223, 0.7817, 0.9163, 0.0589, 0.1127, 0.714], [0.0, 0.0, 0.5464, 0.0, 1.0, 0.9953, 0.6522], [0.0162, 0.4241, 0.0, 0.1405, 0.3126, 0.9906, 0.0], [1.0, 1.0, 1.0, 0.3706, 0.2284, 0.0, 0.3066], [0.9347, 0.6939, 0.8102, 1.0, 0.0368, 0.892, 0.2914]];
+const BEST     = [6, 6, 6, 7, 4, 0, 2];
+const NONMV    = [5];
+const WINNER   = "ptun-vit-base-128";
+const WINNER_WINS = 3;
+const MOVING_TOTAL = 6;
+
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize(); window.addEventListener('resize',resize);
+
+// ── Animation state ──────────────────────────────────────────
+// We cycle through encoders one at a time, each polygon "draws in"
+// along the axes, then all are shown together briefly, then repeat.
+const PHASE_DRAW   = 0;  // drawing current polygon in
+const PHASE_HOLD   = 1;  // holding on this encoder alone
+const PHASE_ALL    = 2;  // show all polygons together
+const PHASE_ALLHOLD= 3;  // hold all
+let phase = PHASE_DRAW;
+let curE  = 0;           // which encoder is spotlighted
+let drawProgress = 0;    // 0..1 how far along the draw-in is
+let phaseTimer = 0;
+const DRAW_SPEED  = 0.022;  // fraction per frame
+const HOLD_FRAMES = 55;
+const ALL_FRAMES  = 110;
+let paused = false;
+let hovE = -1;
+
+// ── Legend panel ────────────────────────────────────────────
+const legDiv = document.createElement('div');
+Object.assign(legDiv.style, {
+  position:'fixed', right:'24px', top:'76px', zIndex:'20',
+  background:'rgba(2,8,20,.94)', padding:'14px 20px',
+  border:'1px solid #1a3a5c',
+  fontFamily:'JetBrains Mono,monospace', fontSize:'11px',
+  lineHeight:'1.8'
+});
+document.body.appendChild(legDiv);
+legDiv.innerHTML = '<div style="color:#F72585;font-size:14px;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px">Encoders — click to isolate</div>';
+const legRows = [];
+MODELS.forEach((m,i)=>{
+  const d = document.createElement('div');
+  Object.assign(d.style,{display:'flex',alignItems:'center',gap:'9px',
+    padding:'3px 6px',cursor:'pointer',borderRadius:'3px',transition:'opacity .2s'});
+  d.innerHTML = `<div style="width:22px;height:3px;background:${COLORS[m]};border-radius:2px;flex-shrink:0"></div>`
+              + `<span style="color:${COLORS[m]}">${m.replace('ptun-','')}</span>`;
+  d.addEventListener('click', ()=>{
+    paused = !paused || hovE !== i;
+    hovE = (paused) ? i : -1;
+    curE = i;
+    drawProgress = 1;
+    phase = PHASE_HOLD;
+  });
+  d.addEventListener('mouseenter', ()=>{ if(!paused){hovE=i;} });
+  d.addEventListener('mouseleave', ()=>{ if(!paused){hovE=-1;} });
+  legDiv.appendChild(d);
+  legRows.push(d);
+});
+
+// Hint
+const hintEl = document.createElement('div');
+Object.assign(hintEl.style,{
+  position:'fixed', bottom:'18px', left:'50%', transform:'translateX(-50%)',
+  color:'rgba(76,201,240,.4)', fontFamily:'JetBrains Mono,monospace',
+  fontSize:'9px', letterSpacing:'2px', textTransform:'uppercase', zIndex:'20'
+});
+hintEl.textContent = 'LARGER POLYGON = BETTER ACCURACY · click encoder to isolate';
+document.body.appendChild(hintEl);
+
+// ── Draw helpers ─────────────────────────────────────────────
+function radarPts(e, cx, cy, R){
+  const n = JOINTS.length;
+  return JOINTS.map((_,j)=>{
+    const a = j/n * Math.PI*2 - Math.PI/2;
+    // MSE_INV: 1 = best accuracy, 0 = worst, null = missing → show as 0
+    const r = MSE_INV[e][j] !== null ? Math.min(1, Math.max(0, MSE_INV[e][j])) : 0;
+    return [cx + Math.cos(a)*R*r, cy + Math.sin(a)*R*r, a, r];
+  });
+}
+
+function drawPolygon(pts, col, alpha, lw, progress){
+  // Draw only `progress` fraction of the polygon (0..1)
+  // Interpolates along the perimeter
+  const n = pts.length;
+  const total = n;
+  const drawn = progress * total;
+  ctx.beginPath();
+  for(let i=0;i<n;i++){
+    const [px,py] = pts[i];
+    if(i === 0) ctx.moveTo(px,py);
+    else if(i < drawn) ctx.lineTo(px,py);
+    else {
+      // Partial last segment
+      const frac = drawn - i;
+      if(frac > 0){
+        const [px0,py0] = pts[i-1];
+        ctx.lineTo(px0 + (px-px0)*frac, py0 + (py-py0)*frac);
+      }
+      break;
+    }
+  }
+  if(progress >= 1) ctx.closePath();
+  ctx.strokeStyle = col; ctx.lineWidth = lw;
+  ctx.globalAlpha = alpha; ctx.stroke(); ctx.globalAlpha = 1;
+  // Fill only when complete
+  if(progress >= 1){
+    ctx.beginPath();
+    pts.forEach(([px,py],i)=> i? ctx.lineTo(px,py): ctx.moveTo(px,py));
+    ctx.closePath();
+    ctx.fillStyle = col; ctx.globalAlpha = alpha*0.13; ctx.fill(); ctx.globalAlpha=1;
+  }
+}
+
+function drawDots(pts, col, r){
+  pts.forEach(([px,py])=>{
+    ctx.beginPath(); ctx.arc(px,py,r,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+  });
+}
+
+// ── Main loop ────────────────────────────────────────────────
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810'; ctx.fillRect(0,0,W,H);
+
+  const cx = W/2 - 90, cy = H/2 + 10;
+  const R  = Math.min(W*0.32, H*0.34);
+  const n  = JOINTS.length;
+  const angles = JOINTS.map((_,i)=> i/n*Math.PI*2 - Math.PI/2);
+
+  // ── Grid rings ──────────────────────────────────────────────
+  [.25,.5,.75,1].forEach(fr=>{
+    ctx.beginPath();
+    angles.forEach((a,i)=>{
+      const px=cx+Math.cos(a)*R*fr, py=cy+Math.sin(a)*R*fr;
+      i? ctx.lineTo(px,py): ctx.moveTo(px,py);
+    });
+    ctx.closePath();
+    ctx.strokeStyle = fr===1 ? 'rgba(76,201,240,.18)' : 'rgba(76,201,240,.05)';
+    ctx.lineWidth = fr===1 ? 1 : 0.6; ctx.stroke();
+    // Ring label (accuracy %)
+    const la = angles[0];
+    ctx.fillStyle='rgba(76,201,240,.3)'; ctx.font='13px JetBrains Mono';
+    ctx.textAlign='left';
+    ctx.fillText(`${Math.round(fr*100)}%`, cx+Math.cos(la)*R*fr+4, cy+Math.sin(la)*R*fr-4);
+  });
+
+  // ── Axes + joint labels ──────────────────────────────────────
+  angles.forEach((a,i)=>{
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(a)*R, cy+Math.sin(a)*R);
+    ctx.strokeStyle='rgba(76,201,240,.18)'; ctx.lineWidth=1; ctx.stroke();
+    const nm = NONMV.includes(i);
+    const dist = R + 24;
+    const lx2 = cx+Math.cos(a)*dist, ly2 = cy+Math.sin(a)*dist;
+    ctx.fillStyle = nm ? 'rgba(76,201,240,.28)' : '#4CC9F0';
+    ctx.font = (nm?'italic ':'')+'bold 11px JetBrains Mono';
+    ctx.textAlign = 'center';
+    const lbl = JOINTS[i].replace('left_','').replace('panda_','')
+                         .replace('_joint','').replace('joint','j');
+    ctx.fillText(lbl, lx2, ly2);
+  });
+  ctx.textAlign='left';
+
+  // ── Advance animation ────────────────────────────────────────
+  if(!paused && hovE < 0){
+    if(phase === PHASE_DRAW){
+      drawProgress = Math.min(1, drawProgress + DRAW_SPEED);
+      if(drawProgress >= 1){ phase=PHASE_HOLD; phaseTimer=0; }
+    } else if(phase === PHASE_HOLD){
+      phaseTimer++;
+      if(phaseTimer >= HOLD_FRAMES){
+        curE = (curE+1) % MODELS.length;
+        if(curE === 0){ phase=PHASE_ALL; phaseTimer=0; }
+        else { phase=PHASE_DRAW; drawProgress=0; }
+      }
+    } else if(phase === PHASE_ALL){
+      phaseTimer++;
+      if(phaseTimer >= ALL_FRAMES){ phase=PHASE_DRAW; drawProgress=0; curE=0; }
+    }
+  }
+
+  // ── Draw polygons ────────────────────────────────────────────
+  if(hovE >= 0){
+    // Hover/isolated: dim all others, highlight hovered
+    MODELS.forEach((m,e)=>{
+      if(e === hovE) return;
+      const pts = radarPts(e,cx,cy,R);
+      drawPolygon(pts, COLORS[m], 0.08, 0.8, 1);
+    });
+    const pts = radarPts(hovE,cx,cy,R);
+    ctx.shadowColor=COLORS[MODELS[hovE]]; ctx.shadowBlur=14;
+    drawPolygon(pts, COLORS[MODELS[hovE]], 0.9, 2.5, 1);
+    ctx.shadowBlur=0;
+    drawDots(pts, COLORS[MODELS[hovE]], 4.5);
+    // RMSE values around dots
+    pts.forEach(([px,py],ji)=>{
+      ctx.fillStyle=COLORS[MODELS[hovE]];
+      ctx.font='15px JetBrains Mono';
+      ctx.textAlign='center';
+      ctx.fillText(MSE_RAW[hovE][ji]!=null?MSE_RAW[hovE][ji].toFixed(3):'?',
+        px + Math.cos(angles[ji])*18, py + Math.sin(angles[ji])*18);
+    });
+    ctx.textAlign='left';
+
+  } else if(phase === PHASE_ALL || phase === PHASE_ALLHOLD){
+    // All visible together
+    MODELS.forEach((m,e)=>{
+      const pts = radarPts(e,cx,cy,R);
+      drawPolygon(pts, COLORS[m], 0.55, 1.4, 1);
+    });
+    MODELS.forEach((m,e)=>{
+      drawDots(radarPts(e,cx,cy,R), COLORS[m], 2.5);
+    });
+  } else {
+    // Draw-in / hold phases: show already-done encoders faintly, animate current
+    for(let e=0;e<curE;e++){
+      const pts = radarPts(e,cx,cy,R);
+      drawPolygon(pts, COLORS[MODELS[e]], 0.22, 1, 1);
+    }
+    // Current encoder draws in
+    const pts = radarPts(curE,cx,cy,R);
+    const col = COLORS[MODELS[curE]];
+    ctx.shadowColor=col; ctx.shadowBlur=phase===PHASE_HOLD?16:8;
+    drawPolygon(pts, col, phase===PHASE_HOLD?0.9:0.8,
+                phase===PHASE_HOLD?2.5:2, drawProgress);
+    ctx.shadowBlur=0;
+    if(drawProgress>=1) drawDots(pts, col, phase===PHASE_HOLD?5:3.5);
+
+    // Encoder name stamp near center
+    if(drawProgress > 0.3){
+      ctx.fillStyle=col; ctx.globalAlpha=Math.min(1,(drawProgress-0.3)*3);
+      ctx.font='bold 23px JetBrains Mono'; ctx.textAlign='center';
+      ctx.fillText(MODELS[curE].replace('ptun-',''), cx, cy+R+36);
+      // Show RMSE values at each node when held
+      if(phase===PHASE_HOLD){
+        pts.forEach(([px,py],ji)=>{
+          ctx.fillStyle=col; ctx.font='15px JetBrains Mono';
+          ctx.fillText(MSE_RAW[curE][ji]!=null?MSE_RAW[curE][ji].toFixed(3):'?',
+            px + Math.cos(angles[ji])*16, py + Math.sin(angles[ji])*16);
+        });
+      }
+      ctx.globalAlpha=1; ctx.textAlign='left';
+    }
+  }
+
+  // ── Center dot ───────────────────────────────────────────────
+  ctx.beginPath(); ctx.arc(cx,cy,4,0,Math.PI*2);
+  ctx.fillStyle='#F72585'; ctx.shadowColor='#F72585'; ctx.shadowBlur=10; ctx.fill(); ctx.shadowBlur=0;
+
+  // ── Winner badge ─────────────────────────────────────────────
+  ctx.fillStyle='#7BF1A8'; ctx.font='bold 18px JetBrains Mono';
+  ctx.fillText(`★ ${WINNER.replace('ptun-','')} best on ${WINNER_WINS}/${MOVING_TOTAL} joints`, cx-R, cy+R+56);
+
+  // Highlight active legend row
+  legRows.forEach((d,i)=>{
+    d.style.background = (i===curE && phase!==PHASE_ALL && !paused || i===hovE)
+      ? `${COLORS[MODELS[i]]}18` : 'transparent';
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+</body></html>

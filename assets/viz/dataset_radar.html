@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Dataset Radar — Per Robot Accuracy</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%}
+#ui{position:fixed;top:22px;left:32px;z-index:20;pointer-events:none}
+#robot-label{font-size:36px;font-weight:800;color:#F72585;letter-spacing:2px;
+              text-shadow:0 0 40px #F72585aa}
+#robot-sub{font-size:16px;color:rgba(76,201,240,.6);letter-spacing:4px;
+            text-transform:uppercase;margin-top:6px}
+#winner-badge{margin-top:10px;font-size:18px;font-weight:700;color:#7BF1A8;
+               text-shadow:0 0 16px #7BF1A8aa}
+#prog{position:fixed;bottom:0;left:0;right:0;height:5px;background:#1a3a5c;z-index:30}
+#prog-fill{height:100%;width:0%;transition:width linear;background:#F72585}
+#dot-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);
+           display:flex;gap:10px;z-index:30}
+.dot{width:10px;height:10px;border-radius:50%;background:#1a3a5c22;
+      border:1px solid #1a3a5c;cursor:pointer;transition:all .3s}
+.dot.active{width:28px;border-radius:5px}
+#controls{position:fixed;bottom:14px;right:28px;display:flex;gap:8px;z-index:30}
+.ctrl{cursor:pointer;padding:7px 18px;font-size:14px;letter-spacing:2px;
+       text-transform:uppercase;border:1px solid #1a3a5c;background:transparent;
+       color:#4CC9F0;font-family:inherit;transition:all .2s}
+.ctrl:hover{background:#4CC9F020;border-color:#4CC9F0}
+#back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+       padding:6px 16px;font-size:14px;letter-spacing:2px;text-transform:uppercase;
+       border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+       font-family:inherit;transition:all .2s;text-decoration:none}
+#back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+#leg{position:fixed;right:24px;top:80px;z-index:20;
+      background:rgba(2,8,20,.92);border:1px solid #1a3a5c;
+      padding:14px 20px;font-size:14px;line-height:2}
+.leg-row{display:flex;align-items:center;gap:8px;cursor:pointer}
+.leg-swatch{width:24px;height:3px;border-radius:2px;flex-shrink:0}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<canvas id="cv"></canvas>
+<div id="ui">
+  <div id="robot-label">—</div>
+  <div id="robot-sub">accuracy radar · all encoders</div>
+  <div id="winner-badge"></div>
+</div>
+<div id="leg"></div>
+<div id="prog"><div id="prog-fill"></div></div>
+<div id="dot-nav"></div>
+<div id="controls">
+  <button class="ctrl" id="btn-prev">◀ prev</button>
+  <button class="ctrl" id="btn-pause">⏸ pause</button>
+  <button class="ctrl" id="btn-next">next ▶</button>
+</div>
+<script>
+const SCREENS = [{"robot": "AL5D", "label": "AL5D (Real 6-DOF)", "models": ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"], "joints": ["height", "distance", "heading", "wrist_angle", "wrist_rotation", "gripper"], "colors": {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"}, "mse_raw": [[0.3014, 0.2094, 0.1453, 0.233, 0.3117, 0.2916], [0.3522, 0.133, 0.1228, 0.3341, 0.3646, 0.3504], [0.114, 0.0879, 0.0787, 0.136, 0.2524, 0.2769], [0.1386, 0.1074, 0.0784, 0.1061, 0.2942, 0.2302], [0.2504, 0.2233, 0.1277, 0.2124, 0.2639, 0.3116], [0.2602, 0.1648, 0.1097, 0.2061, 0.2449, 0.307], [0.1155, 0.0767, 0.0619, 0.1083, 0.3243, 0.2869], [0.1127, 0.0789, 0.0772, 0.0957, 0.28, 0.2846]], "mse_inv": [[0.2121, 0.0948, 0.0, 0.4241, 0.4419, 0.4892], [0.0, 0.616, 0.2698, 0.0, 0.0, 0.0], [0.9946, 0.9236, 0.7986, 0.831, 0.9373, 0.6115], [0.8919, 0.7906, 0.8022, 0.9564, 0.5881, 1.0], [0.4251, 0.0, 0.211, 0.5105, 0.8413, 0.3228], [0.3841, 0.399, 0.4269, 0.5369, 1.0, 0.3611], [0.9883, 1.0, 1.0, 0.9471, 0.3367, 0.5283], [1.0, 0.985, 0.8165, 1.0, 0.7068, 0.5474]], "non_mv": [], "best": [7, 6, 6, 7, 5, 3], "winner": "vit-base-128", "winner_wins": 2, "moving_total": 6}, {"robot": "Unitree_G1", "label": "Unitree G1 (Sim 7-DOF)", "models": ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"], "joints": ["left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_joint", "left_wrist_pitch_joint", "left_wrist_roll_joint", "left_wrist_yaw_joint"], "colors": {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"}, "mse_raw": [[0.0516, 0.0896, 0.0883, 0.063, 0.0004, 0.0005, 0.0001], [0.0302, 0.0739, 0.0802, 0.0411, 0.0043, 0.0045, 0.0006], [0.0139, 0.0259, 0.0239, 0.0164, 0.0095, 0.0072, 0.0054], [0.0191, 0.0218, 0.0237, 0.0134, 0.0091, 0.0084, 0.0045], [0.0791, 0.0961, 0.0957, 0.0801, 0.0061, 0.0064, 0.0009], [0.0613, 0.0927, 0.0987, 0.0677, 0.0034, 0.0063, 0.0007], [0.0287, 0.0508, 0.0586, 0.0358, 0.0043, 0.0034, 0.0008], [0.0239, 0.0376, 0.0693, 0.0323, 0.0048, 0.0038, 0.002]], "mse_inv": [[0.4218, 0.0875, 0.1387, 0.2564, 1.0, 1.0, 1.0], [0.75, 0.2988, 0.2467, 0.5847, 0.5714, 0.4937, 0.9057], [1.0, 0.9448, 0.9973, 0.955, 0.0, 0.1519, 0.0], [0.9202, 1.0, 1.0, 1.0, 0.044, 0.0, 0.1698], [0.0, 0.0, 0.04, 0.0, 0.3736, 0.2532, 0.8491], [0.273, 0.0458, 0.0, 0.1859, 0.6703, 0.2658, 0.8868], [0.773, 0.6097, 0.5347, 0.6642, 0.5714, 0.6329, 0.8679], [0.8466, 0.7873, 0.392, 0.7166, 0.5165, 0.5823, 0.6415]], "non_mv": [4, 5, 6], "best": [2, 3, 3, 3, 0, 0, 0], "winner": "convvae-128", "winner_wins": 3, "moving_total": 4}, {"robot": "Franka_Panda", "label": "Franka Panda (Real 7-DOF)", "models": ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"], "joints": ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"], "colors": {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"}, "mse_raw": [[0.1165, 0.1892, 0.0758, 0.1546, 0.0981, 0.0006, 0.1334], [0.1457, 0.1337, 0.2042, 0.1263, 0.1744, 0.0048, 0.17], [0.0786, 0.1048, 0.12, 0.1208, 0.0997, 0.0204, 0.1032], [0.0737, 0.0968, 0.1099, 0.0617, 0.1688, 0.0195, 0.1407], [0.2065, 0.2162, 0.1487, 0.2019, 0.0794, 0.0007, 0.1488], [0.2041, 0.1461, 0.2388, 0.1804, 0.1447, 0.0008, 0.2343], [0.058, 0.0509, 0.0739, 0.1452, 0.1527, 0.0219, 0.1941], [0.0677, 0.1015, 0.1052, 0.0489, 0.1709, 0.0029, 0.1961]], "mse_inv": [[0.6061, 0.1633, 0.9885, 0.3092, 0.8032, 1.0, 0.7696], [0.4094, 0.4991, 0.2098, 0.4941, 0.0, 0.8028, 0.4905], [0.8613, 0.6739, 0.7204, 0.5301, 0.7863, 0.0704, 1.0], [0.8943, 0.7223, 0.7817, 0.9163, 0.0589, 0.1127, 0.714], [0.0, 0.0, 0.5464, 0.0, 1.0, 0.9953, 0.6522], [0.0162, 0.4241, 0.0, 0.1405, 0.3126, 0.9906, 0.0], [1.0, 1.0, 1.0, 0.3706, 0.2284, 0.0, 0.3066], [0.9347, 0.6939, 0.8102, 1.0, 0.0368, 0.892, 0.2914]], "non_mv": [5], "best": [6, 6, 6, 7, 4, 0, 2], "winner": "vit-base-128", "winner_wins": 3, "moving_total": 6}, {"robot": "G1_regress_Franka", "label": "G1 \u2192 Franka Transfer", "models": ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"], "joints": ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"], "colors": {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"}, "mse_raw": [[0.1568, 0.1961, 0.2301, 0.2109, 0.1083, 0.0107, 0.1603], [0.203, 0.1538, 0.2232, 0.0974, 0.1464, 0.0064, 0.2144], [0.1954, 0.1995, 0.1853, 0.2206, 0.1381, 0.0213, 0.2063], [0.1455, 0.1939, 0.2525, 0.1836, 0.115, 0.0002, 0.1872], [0.1729, 0.2095, 0.2067, 0.136, 0.1259, 0.0046, 0.1474], [0.2083, 0.2142, 0.1948, 0.1726, 0.1261, 0.0039, 0.1827], [0.1127, 0.1308, 0.1348, 0.1028, 0.1544, 0.0016, 0.2341], [0.1183, 0.1787, 0.1135, 0.0787, 0.1405, 0.0384, 0.2334]], "mse_inv": [[0.5387, 0.217, 0.1612, 0.0684, 1.0, 0.7251, 0.8512], [0.0554, 0.7242, 0.2108, 0.8682, 0.1735, 0.8377, 0.2272], [0.1349, 0.1763, 0.4835, 0.0, 0.3536, 0.4476, 0.3206], [0.6569, 0.2434, 0.0, 0.2607, 0.8547, 1.0, 0.5409], [0.3703, 0.0564, 0.3295, 0.5962, 0.6182, 0.8848, 1.0], [0.0, 0.0, 0.4151, 0.3383, 0.6139, 0.9031, 0.5928], [1.0, 1.0, 0.8468, 0.8302, 0.0, 0.9634, 0.0], [0.9414, 0.4257, 1.0, 1.0, 0.3015, 0.0, 0.0081]], "non_mv": [5], "best": [6, 6, 7, 7, 0, 3, 4], "winner": "vit-base-128", "winner_wins": 2, "moving_total": 6}, {"robot": "Franka_regress_G1", "label": "Franka \u2192 G1 Transfer", "models": ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"], "joints": ["left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_joint", "left_wrist_pitch_joint", "left_wrist_roll_joint", "left_wrist_yaw_joint"], "colors": {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"}, "mse_raw": [[0.0369, 0.0822, 0.0952, 0.0386, 0.0014, 0.0006, 0.0001], [0.0358, 0.0818, 0.1049, 0.0409, 0.003, 0.0026, 0.0002], [0.1108, 0.1193, 0.1262, 0.1092, 0.0043, 0.0042, 0.0005], [0.085, 0.1053, 0.1144, 0.0909, 0.0022, 0.0017, 0.0004], [0.1919, 0.153, 0.145, 0.1795, 0.0044, 0.012, 0.0091], [0.1874, 0.1523, 0.144, 0.1812, 0.007, 0.0006, 0.0004], [0.089, 0.1208, 0.1479, 0.1084, 0.0016, 0.0017, 0.0006], [0.0716, 0.1126, 0.1336, 0.0887, 0.0034, 0.0014, 0.0011]], "mse_inv": [[0.993, 0.9944, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 0.8159, 0.9839, 0.7143, 0.8246, 0.9889], [0.5195, 0.4733, 0.4118, 0.5049, 0.4821, 0.6842, 0.9556], [0.6848, 0.6699, 0.6357, 0.6332, 0.8571, 0.9035, 0.9667], [0.0, 0.0, 0.055, 0.0119, 0.4643, 0.0, 0.0], [0.0288, 0.0098, 0.074, 0.0, 0.0, 1.0, 0.9667], [0.6592, 0.4522, 0.0, 0.5105, 0.9643, 0.9035, 0.9444], [0.7707, 0.5674, 0.2713, 0.6487, 0.6429, 0.9298, 0.8889]], "non_mv": [4, 5, 6], "best": [1, 1, 0, 0, 0, 5, 0], "winner": "convvae-128", "winner_wins": 4, "moving_total": 4}];
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+const labelEl  = document.getElementById('robot-label');
+const subEl    = document.getElementById('robot-sub');
+const winEl    = document.getElementById('winner-badge');
+const progFill = document.getElementById('prog-fill');
+const dotNav   = document.getElementById('dot-nav');
+const legEl    = document.getElementById('leg');
+const pauseBtn = document.getElementById('btn-pause');
+
+const DWELL=6500;
+let cur=0, paused=false, startMs=Date.now(), elapsed=0;
+let drawProg=0, phase=0, phaseTimer=0, curE=0;
+// phase 0=draw-in cycling, 1=all together
+const DRAW_SPEED=0.025, HOLD_F=50, ALL_F=120;
+let hovE=-1;
+
+// Build dots
+SCREENS.forEach((_,i)=>{
+  const d=document.createElement('div');
+  d.className='dot';
+  d.addEventListener('click',()=>goTo(i));
+  dotNav.appendChild(d);
+});
+
+function buildLegend(s){
+  legEl.innerHTML='<div style="color:#F72585;font-size:11px;letter-spacing:3px;'
+    +'text-transform:uppercase;margin-bottom:8px">Encoders</div>';
+  s.models.forEach((m,i)=>{
+    const col=s.colors[m]||'#888';
+    const row=document.createElement('div');
+    row.className='leg-row';
+    row.innerHTML=`<div class="leg-swatch" style="background:${col}"></div>`
+      +`<span style="color:${col}">${m.replace('ptun-','')}</span>`;
+    row.addEventListener('mouseenter',()=>hovE=i);
+    row.addEventListener('mouseleave',()=>hovE=-1);
+    legEl.appendChild(row);
+  });
+}
+
+function goTo(idx){
+  cur=((idx%SCREENS.length)+SCREENS.length)%SCREENS.length;
+  const s=SCREENS[cur];
+  labelEl.textContent=s.label;
+  labelEl.style.color='#F72585';
+  winEl.textContent=`★ ${s.winner} wins ${s.winner_wins}/${s.moving_total} moving joints`;
+  buildLegend(s);
+  // Update dots
+  document.querySelectorAll('.dot').forEach((d,i)=>{
+    d.className='dot'+(i===cur?' active':'');
+    d.style.background=i===cur?'#F72585':'';
+    d.style.borderColor=i===cur?'#F72585':'';
+  });
+  // Reset animation
+  drawProg=0;phase=0;phaseTimer=0;curE=0;hovE=-1;
+  startMs=Date.now();elapsed=0;
+}
+
+function radarPts(s,e,cx,cy,R){
+  const n=s.joints.length;
+  return s.joints.map((_,j)=>{
+    const a=j/n*Math.PI*2-Math.PI/2;
+    const inv=s.mse_inv[e][j];
+    const r=inv!==null?Math.min(1,Math.max(0,inv)):0;
+    return[cx+Math.cos(a)*R*r, cy+Math.sin(a)*R*r, a, r];
+  });
+}
+
+function drawPoly(pts,col,alpha,lw,progress){
+  const tot=pts.length;
+  const drawn=progress*tot;
+  ctx.beginPath();
+  for(let i=0;i<tot;i++){
+    const[px,py]=pts[i];
+    if(i===0){ctx.moveTo(px,py);continue;}
+    if(i<drawn){ctx.lineTo(px,py);continue;}
+    const frac=drawn-i;
+    if(frac>0){const[px0,py0]=pts[i-1];ctx.lineTo(px0+(px-px0)*frac,py0+(py-py0)*frac);}
+    break;
+  }
+  if(progress>=1)ctx.closePath();
+  ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.globalAlpha=alpha;ctx.stroke();
+  if(progress>=1){
+    ctx.beginPath();pts.forEach(([px,py],i)=>i?ctx.lineTo(px,py):ctx.moveTo(px,py));
+    ctx.closePath();ctx.fillStyle=col;ctx.globalAlpha=alpha*0.12;ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function frame(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+
+  const s=SCREENS[cur];
+  if(!s){requestAnimationFrame(frame);return;}
+
+  const cx=W/2, cy=H/2+20;
+  const R=Math.min(W,H)*0.34;
+  const n=s.joints.length;
+  const angles=s.joints.map((_,i)=>i/n*Math.PI*2-Math.PI/2);
+
+  // Rings
+  [0.25,0.5,0.75,1].forEach(fr=>{
+    ctx.beginPath();
+    angles.forEach((a,i)=>{
+      const px=cx+Math.cos(a)*R*fr,py=cy+Math.sin(a)*R*fr;
+      i?ctx.lineTo(px,py):ctx.moveTo(px,py);
+    });
+    ctx.closePath();
+    ctx.strokeStyle=fr===1?'rgba(76,201,240,.22)':'rgba(76,201,240,.06)';
+    ctx.lineWidth=fr===1?1.5:0.7;ctx.stroke();
+    // Ring label
+    const la=angles[0];
+    ctx.fillStyle='rgba(76,201,240,.35)';ctx.font='13px JetBrains Mono';ctx.textAlign='left';
+    ctx.fillText(`${Math.round(fr*100)}%`,cx+Math.cos(la)*R*fr+5,cy+Math.sin(la)*R*fr-5);
+  });
+
+  // Axes + joint labels
+  angles.forEach((a,i)=>{
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(a)*R,cy+Math.sin(a)*R);
+    ctx.strokeStyle='rgba(76,201,240,.18)';ctx.lineWidth=1;ctx.stroke();
+    const nm=s.non_mv.includes(i);
+    const lx=cx+Math.cos(a)*(R+34),ly=cy+Math.sin(a)*(R+34);
+    ctx.fillStyle=nm?'rgba(76,201,240,.25)':'#4CC9F0';
+    ctx.font=(nm?'italic ':'')+'bold 16px JetBrains Mono';
+    ctx.textAlign='center';
+    const lbl=s.joints[i].replace('left_','').replace('panda_','')
+                          .replace('_joint','').replace('joint','j');
+    ctx.fillText(lbl,lx,ly);
+  });
+  ctx.textAlign='left';
+
+  // Advance animation
+  if(!paused && hovE<0){
+    if(phase===0){
+      drawProg=Math.min(1,drawProg+DRAW_SPEED);
+      if(drawProg>=1){phaseTimer++;if(phaseTimer>=HOLD_F){curE=(curE+1)%s.models.length;drawProg=0;phaseTimer=0;if(curE===0){phase=1;phaseTimer=0;}}}
+    } else {
+      phaseTimer++;if(phaseTimer>=ALL_F){phase=0;curE=0;drawProg=0;phaseTimer=0;}
+    }
+  }
+
+  // Draw polygons
+  if(hovE>=0){
+    s.models.forEach((_,e)=>{
+      if(e===hovE)return;
+      drawPoly(radarPts(s,e,cx,cy,R),s.colors[s.models[e]],0.07,1,1);
+    });
+    const col=s.colors[s.models[hovE]];
+    ctx.shadowColor=col;ctx.shadowBlur=18;
+    drawPoly(radarPts(s,hovE,cx,cy,R),col,0.92,3,1);
+    ctx.shadowBlur=0;
+    // RMSE values at vertices
+    radarPts(s,hovE,cx,cy,R).forEach(([px,py,a],ji)=>{
+      const v=s.mse_raw[hovE][ji];
+      ctx.fillStyle=col;ctx.font='bold 13px JetBrains Mono';ctx.textAlign='center';
+      ctx.fillText(v!==null?v.toFixed(3):'—',px+Math.cos(a)*22,py+Math.sin(a)*22);
+    });
+    ctx.textAlign='left';
+  } else if(phase===1){
+    s.models.forEach((_,e)=>drawPoly(radarPts(s,e,cx,cy,R),s.colors[s.models[e]],0.60,2,1));
+  } else {
+    for(let e=0;e<curE;e++) drawPoly(radarPts(s,e,cx,cy,R),s.colors[s.models[e]],0.22,1,1);
+    const col=s.colors[s.models[curE]];
+    ctx.shadowColor=col;ctx.shadowBlur=phase===0?10:18;
+    drawPoly(radarPts(s,curE,cx,cy,R),col,0.88,2.5,drawProg);
+    ctx.shadowBlur=0;
+    // Model name stamp
+    if(drawProg>0.3){
+      ctx.fillStyle=col;ctx.globalAlpha=Math.min(1,(drawProg-0.3)*2.5);
+      ctx.font='bold 20px JetBrains Mono';ctx.textAlign='center';
+      ctx.fillText(s.models[curE].replace('ptun-',''),cx,cy+R+52);
+      ctx.globalAlpha=1;ctx.textAlign='left';
+    }
+  }
+
+  // Center dot
+  ctx.beginPath();ctx.arc(cx,cy,5,0,Math.PI*2);
+  ctx.fillStyle='#F72585';ctx.shadowColor='#F72585';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+
+  // Progress timer
+  if(!paused){
+    elapsed=Date.now()-startMs;
+    const frac=Math.min(1,elapsed/DWELL);
+    progFill.style.width=(frac*100)+'%';
+    if(frac>=1) goTo(cur+1);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+document.getElementById('btn-prev').addEventListener('click',()=>goTo(cur-1));
+document.getElementById('btn-next').addEventListener('click',()=>goTo(cur+1));
+pauseBtn.addEventListener('click',()=>{
+  paused=!paused;pauseBtn.textContent=paused?'▶ play':'⏸ pause';
+  if(!paused)startMs=Date.now()-elapsed;
+});
+
+goTo(0);
+frame();
+</script>
+</body>
+</html>

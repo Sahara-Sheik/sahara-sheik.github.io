@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Ranking Flow — Encoder Positions Across Robots</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  canvas{display:block}
+  #ui{position:fixed;top:20px;left:28px;z-index:20}
+  #ttl{color:#F72585;font-size:32px;font-weight:800;letter-spacing:2px;
+        text-shadow:0 0 30px #F72585aa;margin-bottom:6px}
+  #sub{color:#4CC9F0;font-size:16px;letter-spacing:4px;text-transform:uppercase;opacity:.7}
+  #back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+         padding:6px 16px;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+         border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+         font-family:inherit;transition:all .2s;text-decoration:none}
+  #back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+  #tip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);
+        border:1px solid #1a3a5c;padding:10px 14px;font-size:17px;color:#aaa;
+        min-width:160px;box-shadow:0 0 20px #4CC9F015;z-index:40;line-height:1.7}
+  #tip b{color:#F72585}
+  #tip em{color:#4CC9F0}
+  #tip strong{color:#7BF1A8;font-size:22px}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="ui"><div id="ttl">Ranking Flow — Encoder Positions Across Robots</div><div id="sub">Rank 1 = lowest avg RMSE on that robot · lines show stability</div></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+
+const CONFIGS     = ["AL5D", "Unitree_G1", "Franka_Panda", "G1_regress_Franka", "Franka_regress_G1"];
+const CFG_LABELS  = {"AL5D": "AL5D", "Unitree_G1": "Unitree G1", "Franka_Panda": "Franka Panda", "G1_regress_Franka": "G1\u2192Franka", "Franka_regress_G1": "Franka\u2192G1"};
+const MODELS      = ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"];
+const COLORS      = {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"};
+const CFG_AVGS    = {"AL5D": {"ptun-convvae-128": 0.2487, "ptun-convvae-256": 0.2762, "ptun-vgg19-128": 0.1577, "ptun-vgg19-256": 0.1591, "ptun-resnet50-128": 0.2315, "ptun-resnet50-256": 0.2154, "ptun-vit-base-128": 0.1623, "ptun-vit-base-256": 0.1548}, "Unitree_G1": {"ptun-convvae-128": 0.0731, "ptun-convvae-256": 0.0563, "ptun-vgg19-128": 0.02, "ptun-vgg19-256": 0.0195, "ptun-resnet50-128": 0.0878, "ptun-resnet50-256": 0.0801, "ptun-vit-base-128": 0.0434, "ptun-vit-base-256": 0.0408}, "Franka_Panda": {"ptun-convvae-128": 0.1279, "ptun-convvae-256": 0.159, "ptun-vgg19-128": 0.1045, "ptun-vgg19-256": 0.1086, "ptun-resnet50-128": 0.1669, "ptun-resnet50-256": 0.1914, "ptun-vit-base-128": 0.1125, "ptun-vit-base-256": 0.1151}, "G1_regress_Franka": {"ptun-convvae-128": 0.1771, "ptun-convvae-256": 0.173, "ptun-vgg19-128": 0.1909, "ptun-vgg19-256": 0.1796, "ptun-resnet50-128": 0.1664, "ptun-resnet50-256": 0.1831, "ptun-vit-base-128": 0.1449, "ptun-vit-base-256": 0.1439}, "Franka_regress_G1": {"ptun-convvae-128": 0.0632, "ptun-convvae-256": 0.0659, "ptun-vgg19-128": 0.1164, "ptun-vgg19-256": 0.0989, "ptun-resnet50-128": 0.1674, "ptun-resnet50-256": 0.1662, "ptun-vit-base-128": 0.1165, "ptun-vit-base-256": 0.1016}};
+const CFG_RANKS   = {"AL5D": {"ptun-vit-base-256": 1, "ptun-vgg19-128": 2, "ptun-vgg19-256": 3, "ptun-vit-base-128": 4, "ptun-resnet50-256": 5, "ptun-resnet50-128": 6, "ptun-convvae-128": 7, "ptun-convvae-256": 8}, "Unitree_G1": {"ptun-vgg19-256": 1, "ptun-vgg19-128": 2, "ptun-vit-base-256": 3, "ptun-vit-base-128": 4, "ptun-convvae-256": 5, "ptun-convvae-128": 6, "ptun-resnet50-256": 7, "ptun-resnet50-128": 8}, "Franka_Panda": {"ptun-vgg19-128": 1, "ptun-vgg19-256": 2, "ptun-vit-base-128": 3, "ptun-vit-base-256": 4, "ptun-convvae-128": 5, "ptun-convvae-256": 6, "ptun-resnet50-128": 7, "ptun-resnet50-256": 8}, "G1_regress_Franka": {"ptun-vit-base-256": 1, "ptun-vit-base-128": 2, "ptun-resnet50-128": 3, "ptun-convvae-256": 4, "ptun-convvae-128": 5, "ptun-vgg19-256": 6, "ptun-resnet50-256": 7, "ptun-vgg19-128": 8}, "Franka_regress_G1": {"ptun-convvae-128": 1, "ptun-convvae-256": 2, "ptun-vgg19-256": 3, "ptun-vit-base-256": 4, "ptun-vgg19-128": 5, "ptun-vit-base-128": 6, "ptun-resnet50-256": 7, "ptun-resnet50-128": 8}};
+
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+const tip=document.getElementById('tip');
+let hovM=null;
+let anim=0;
+
+cv.addEventListener('mousemove',e=>{
+  // Find closest model line
+  const ml=130, mr=100;
+  const plotW=W-ml-mr;
+  const nC=CONFIGS.length;
+  const dx=plotW/(nC-1);
+  const nM=MODELS.length;
+  const mt=90, mb=60, plotH=H-mt-mb;
+  const rankH=plotH/(nM+1);
+  let closest=null, closestDist=30;
+  MODELS.forEach(m=>{
+    CONFIGS.forEach((c,ci)=>{
+      const r=CFG_RANKS[c]?.[m];
+      if(r===undefined) return;
+      const px=ml+ci*dx, py=mt+r*rankH;
+      const d=Math.hypot(e.clientX-px,e.clientY-py);
+      if(d<closestDist){closestDist=d;closest=m;}
+    });
+  });
+  hovM=closest;
+  if(hovM){
+    const rows=CONFIGS.map(c=>{
+      const r=CFG_RANKS[c]?.[hovM], v=CFG_AVGS[c]?.[hovM];
+      return r?`<em>${CFG_LABELS[c]}</em>: rank <strong>#${r}</strong> (${v?v.toFixed(3):'?'})`:null;
+    }).filter(Boolean).join('<br>');
+    tip.style.display='block';tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-8)+'px';
+    tip.innerHTML=`<b style="color:${COLORS[hovM]}">${hovM}</b><br>${rows}`;
+  } else tip.style.display='none';
+});
+cv.addEventListener('mouseleave',()=>{hovM=null;tip.style.display='none';});
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+  anim=Math.min(1,anim+0.015);
+
+  const nC=CONFIGS.length, nM=MODELS.length;
+  const ml=130, mr=100, mt=90, mb=60;
+  const plotW=W-ml-mr, plotH=H-mt-mb;
+  const dx=plotW/(Math.max(nC-1,1));
+  const rankH=plotH/(nM+1);
+
+  // Column guides + labels
+  CONFIGS.forEach((c,ci)=>{
+    const x=ml+ci*dx;
+    ctx.beginPath();ctx.moveTo(x,mt);ctx.lineTo(x,mt+plotH);
+    ctx.strokeStyle='rgba(76,201,240,0.08)';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle='#4CC9F0';ctx.font='bold 18px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(CFG_LABELS[c],x,mt-22);
+    // Robot type tag
+    ctx.fillStyle='rgba(76,201,240,0.3)';ctx.font='13px JetBrains Mono';
+    const tag=c.includes('regress')?'transfer':'own';
+    ctx.fillText(tag,x,mt-8);
+  });
+  ctx.textAlign='left';
+
+  // Rank grid lines
+  for(let r=1;r<=nM;r++){
+    const y=mt+r*rankH;
+    ctx.beginPath();ctx.moveTo(ml-8,y);ctx.lineTo(ml+plotW,y);
+    ctx.strokeStyle='rgba(76,201,240,0.04)';ctx.lineWidth=0.5;ctx.stroke();
+    ctx.fillStyle='rgba(76,201,240,0.2)';ctx.font='15px JetBrains Mono';
+    ctx.textAlign='right';ctx.fillText(`#${r}`,ml-12,y+3);
+  }
+  ctx.textAlign='left';
+
+  // Draw all lines (dim) then highlighted
+  const drawModel=(m,highlight)=>{
+    const col=COLORS[m];
+    const pts=[];
+    CONFIGS.forEach((c,ci)=>{
+      const r=CFG_RANKS[c]?.[m];
+      if(r!==undefined) pts.push({x:ml+ci*dx*anim, y:mt+r*rankH, ci, rank:r, cfg:c});
+    });
+    if(pts.length<1) return;
+
+    // Smooth curved line through points
+    ctx.beginPath();
+    pts.forEach((p,i)=>{
+      if(i===0){ctx.moveTo(p.x,p.y);return;}
+      const prev=pts[i-1];
+      const cpx=(prev.x+p.x)/2;
+      ctx.bezierCurveTo(cpx,prev.y,cpx,p.y,p.x,p.y);
+    });
+    ctx.strokeStyle=col;
+    ctx.lineWidth=highlight?3:1.2;
+    ctx.globalAlpha=highlight?1:(hovM?0.12:0.45);
+    ctx.shadowColor=highlight?col:'transparent';ctx.shadowBlur=highlight?12:0;
+    ctx.stroke();ctx.shadowBlur=0;ctx.globalAlpha=1;
+
+    // Dots + rank labels
+    pts.forEach(p=>{
+      ctx.beginPath();ctx.arc(p.x,p.y,highlight?7:4,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.globalAlpha=highlight?1:(hovM?0.15:0.6);
+      ctx.fill();ctx.globalAlpha=1;
+      if(highlight){
+        ctx.fillStyle='#020810';ctx.font='bold 13px JetBrains Mono';ctx.textAlign='center';
+        ctx.fillText(p.rank,p.x,p.y+3);ctx.textAlign='left';
+      }
+    });
+
+    // Name at start + end
+    if(highlight||!hovM){
+      const first=pts[0], last=pts[pts.length-1];
+      ctx.fillStyle=col;ctx.globalAlpha=highlight?1:(hovM?0.1:0.5);
+      ctx.font=(highlight?'bold ':'')+'10px JetBrains Mono';
+      ctx.textAlign='right';
+      ctx.fillText(m.replace('ptun-',''),first.x-12,first.y+4);
+      ctx.textAlign='left';
+      ctx.fillText(m.replace('ptun-',''),last.x+12,last.y+4);
+      ctx.globalAlpha=1;ctx.textAlign='left';
+    }
+  };
+
+  MODELS.filter(m=>m!==hovM).forEach(m=>drawModel(m,false));
+  if(hovM) drawModel(hovM,true);
+
+  // Top label
+  ctx.fillStyle='#F72585';ctx.font='bold 23px JetBrains Mono';
+  ctx.textAlign='center';
+  ctx.fillText('RANK 1 = BEST (lowest avg RMSE)',W/2,H-20);
+  ctx.textAlign='left';
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+</body></html>

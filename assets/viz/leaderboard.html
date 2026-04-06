@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Encoder Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  canvas{display:block}
+  #ui{position:fixed;top:20px;left:28px;z-index:20}
+  #ttl{color:#F72585;font-size:32px;font-weight:800;letter-spacing:2px;
+        text-shadow:0 0 30px #F72585aa;margin-bottom:6px}
+  #sub{color:#4CC9F0;font-size:16px;letter-spacing:4px;text-transform:uppercase;opacity:.7}
+  #back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+         padding:6px 16px;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+         border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+         font-family:inherit;transition:all .2s;text-decoration:none}
+  #back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+  #tip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);
+        border:1px solid #1a3a5c;padding:10px 14px;font-size:17px;color:#aaa;
+        min-width:160px;box-shadow:0 0 20px #4CC9F015;z-index:40;line-height:1.7}
+  #tip b{color:#F72585}
+  #tip em{color:#4CC9F0}
+  #tip strong{color:#7BF1A8;font-size:22px}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="ui" style="display:none"><div id="ttl">Encoder Leaderboard</div><div id="sub">Joint-wins by architecture family (128 + 256 combined) · hover for breakdown</div></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+
+const FAMILIES    = [{"key": "vit-base", "label": "ViT-Base", "models": ["ptun-vit-base-128", "ptun-vit-base-256"], "color": "#4CC9F0", "wins": 12, "breakdown": {"ptun-vit-base-128": 7, "ptun-vit-base-256": 5}, "detail": [{"robot": "AL5D", "joint": "distance", "model": "ptun-vit-base-128"}, {"robot": "AL5D", "joint": "heading", "model": "ptun-vit-base-128"}, {"robot": "Franka Panda", "joint": "joint1", "model": "ptun-vit-base-128"}, {"robot": "Franka Panda", "joint": "joint2", "model": "ptun-vit-base-128"}, {"robot": "Franka Panda", "joint": "joint3", "model": "ptun-vit-base-128"}, {"robot": "G1 \u2192 Franka Transfer", "joint": "joint1", "model": "ptun-vit-base-128"}, {"robot": "G1 \u2192 Franka Transfer", "joint": "joint2", "model": "ptun-vit-base-128"}, {"robot": "AL5D", "joint": "height", "model": "ptun-vit-base-256"}, {"robot": "AL5D", "joint": "wrist_angle", "model": "ptun-vit-base-256"}, {"robot": "Franka Panda", "joint": "joint4", "model": "ptun-vit-base-256"}, {"robot": "G1 \u2192 Franka Transfer", "joint": "joint3", "model": "ptun-vit-base-256"}, {"robot": "G1 \u2192 Franka Transfer", "joint": "joint4", "model": "ptun-vit-base-256"}]}, {"key": "vgg19", "label": "VGG-19", "models": ["ptun-vgg19-128", "ptun-vgg19-256"], "color": "#FFD60A", "wins": 6, "breakdown": {"ptun-vgg19-128": 2, "ptun-vgg19-256": 4}, "detail": [{"robot": "Unitree G1", "joint": "shoulder_pitch", "model": "ptun-vgg19-128"}, {"robot": "Franka Panda", "joint": "joint7", "model": "ptun-vgg19-128"}, {"robot": "AL5D", "joint": "gripper", "model": "ptun-vgg19-256"}, {"robot": "Unitree G1", "joint": "shoulder_roll", "model": "ptun-vgg19-256"}, {"robot": "Unitree G1", "joint": "shoulder_yaw", "model": "ptun-vgg19-256"}, {"robot": "Unitree G1", "joint": "elbow", "model": "ptun-vgg19-256"}]}, {"key": "convvae", "label": "Conv-VAE", "models": ["ptun-convvae-128", "ptun-convvae-256"], "color": "#F72585", "wins": 5, "breakdown": {"ptun-convvae-128": 3, "ptun-convvae-256": 2}, "detail": [{"robot": "G1 \u2192 Franka Transfer", "joint": "joint5", "model": "ptun-convvae-128"}, {"robot": "Franka \u2192 G1 Transfer", "joint": "shoulder_yaw", "model": "ptun-convvae-128"}, {"robot": "Franka \u2192 G1 Transfer", "joint": "elbow", "model": "ptun-convvae-128"}, {"robot": "Franka \u2192 G1 Transfer", "joint": "shoulder_pitch", "model": "ptun-convvae-256"}, {"robot": "Franka \u2192 G1 Transfer", "joint": "shoulder_roll", "model": "ptun-convvae-256"}]}, {"key": "resnet50", "label": "ResNet-50", "models": ["ptun-resnet50-128", "ptun-resnet50-256"], "color": "#7BF1A8", "wins": 3, "breakdown": {"ptun-resnet50-128": 2, "ptun-resnet50-256": 1}, "detail": [{"robot": "Franka Panda", "joint": "joint5", "model": "ptun-resnet50-128"}, {"robot": "G1 \u2192 Franka Transfer", "joint": "joint7", "model": "ptun-resnet50-128"}, {"robot": "AL5D", "joint": "wrist_rotation", "model": "ptun-resnet50-256"}]}];
+const TOTAL_JOINTS= 26;
+
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let W,H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+const tip=document.getElementById('tip');
+const MAX_W=Math.max(...FAMILIES.map(f=>f.wins));
+let anim=0, hov=-1, pTimer=0;
+const particles=[];
+
+const MEDAL=['#FFD700','#C0C0C0','#CD7F32'];
+const MEDAL_EMOJI=['🥇','🥈','🥉'];
+
+cv.addEventListener('mousemove',e=>{
+  // hit-test bars
+  const SHELF_H=Math.min(H*0.40,260);
+  const barArea=H-SHELF_H-60;
+  const nF=FAMILIES.length;
+  const barH=Math.min(64,barArea/nF-10);
+  const top=SHELF_H+32, ml=W*0.24;
+  const idx=Math.floor((e.clientY-top)/(barH+10));
+  hov=(idx>=0&&idx<nF)?idx:-1;
+  if(hov>=0){
+    const f=FAMILIES[hov];
+    const bkd=Object.entries(f.breakdown)
+      .map(([m,w])=>`<span style="color:${f.color}">${m.replace('ptun-','')}</span>: ${w} wins`).join('<br>');
+    const rows=(f.detail||[]).slice(0,10)
+      .map(x=>`<span style="color:#4CC9F077">${x.model.replace('ptun-','')}</span> · `
+        +`<em>${x.robot}</em> · ${x.joint}`).join('<br>');
+    const more=f.detail.length>10?`<br><span style="opacity:.4">…+${f.detail.length-10} more</span>`:'';
+    tip.style.display='block';tip.style.left=(e.clientX+16)+'px';tip.style.top=(e.clientY-10)+'px';
+    tip.innerHTML=`<b style="color:${f.color};font-size:17px">${f.label}</b>`
+      +`<br><strong style="font-size:28px;color:#7BF1A8">${f.wins}</strong>`
+      +` <span style="color:#aaa">wins / ${TOTAL_JOINTS} joints</span>`
+      +`<br><br>${bkd}<br><br>${rows}${more}`;
+  } else tip.style.display='none';
+});
+cv.addEventListener('mouseleave',()=>{hov=-1;tip.style.display='none';});
+
+function spawnParticle(x,y,col){
+  if(particles.length>150) return;
+  const types=['★','✦','·','•'];
+  particles.push({
+    x,y,
+    vx:(Math.random()-0.5)*5,
+    vy:-Math.random()*5-2,
+    life:1,col,
+    r:Math.random()*3+1.5,
+    glyph:Math.random()<0.5?types[Math.floor(Math.random()*types.length)]:null,
+    rot:Math.random()*Math.PI*2,
+    spin:(Math.random()-0.5)*0.2,
+  });
+}
+
+function drawTrophy(cx, cy, size, medalCol, accentCol, rank, famLabel, wins, breakdown){
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Outer glow — medal color
+  const gr=ctx.createRadialGradient(0,0,0,0,0,size*2.2);
+  gr.addColorStop(0,medalCol+'44');gr.addColorStop(1,medalCol+'00');
+  ctx.beginPath();ctx.arc(0,0,size*2.2,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+
+  // Cup body — always gold/silver/bronze
+  ctx.shadowColor=medalCol;ctx.shadowBlur=28;
+  ctx.beginPath();
+  ctx.moveTo(-size*0.58,-size*0.75);
+  ctx.bezierCurveTo(-size*0.78,size*0.15,-size*0.48,size*0.48,0,size*0.48);
+  ctx.bezierCurveTo(size*0.48,size*0.48,size*0.78,size*0.15,size*0.58,-size*0.75);
+  ctx.closePath();
+  const g=ctx.createLinearGradient(-size*0.58,-size*0.4,size*0.58,size*0.3);
+  g.addColorStop(0,medalCol+'dd');g.addColorStop(0.45,medalCol);
+  g.addColorStop(0.7,medalCol+'cc');g.addColorStop(1,medalCol+'77');
+  ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle=medalCol;ctx.lineWidth=2;ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Shine highlight on cup
+  ctx.beginPath();
+  ctx.moveTo(-size*0.30,-size*0.65);
+  ctx.bezierCurveTo(-size*0.42,-size*0.30,-size*0.35,size*0.10,-size*0.20,size*0.28);
+  ctx.strokeStyle='rgba(255,255,255,0.30)';ctx.lineWidth=size*0.06;ctx.stroke();
+
+  // Stem + base
+  ctx.fillStyle=medalCol+'88';
+  ctx.fillRect(-size*0.11,size*0.48,size*0.22,size*0.22);
+  ctx.fillRect(-size*0.36,size*0.70,size*0.72,size*0.11);
+
+  // Handles
+  ctx.strokeStyle=medalCol+'77';ctx.lineWidth=Math.max(2,size*0.06);
+  ctx.beginPath();ctx.arc(-size*0.60,-size*0.05,size*0.17,Math.PI*0.25,Math.PI*1.05);ctx.stroke();
+  ctx.beginPath();ctx.arc( size*0.60,-size*0.05,size*0.17,-Math.PI*0.05,Math.PI*0.75);ctx.stroke();
+
+  // Rank number inside cup — dark text on metal
+  ctx.fillStyle='rgba(0,0,0,0.65)';
+  ctx.font=`bold ${Math.round(size*0.52)}px JetBrains Mono`;
+  ctx.textAlign='center';
+  ctx.fillText(rank+1, 0, size*0.12);
+
+  ctx.restore();
+
+  // === Labels BELOW trophy — well spaced ===
+  const lineH = size * 0.44;
+  let labelY = cy + size * 0.98;
+
+  // Medal emoji
+  ctx.font=`${Math.round(size*0.60)}px serif`;
+  ctx.textAlign='center';
+  ctx.fillText(MEDAL_EMOJI[rank], cx, labelY);
+  labelY += lineH * 1.1;
+
+  // Architecture name — encoder accent color
+  ctx.fillStyle=accentCol;
+  ctx.font=`bold ${Math.round(size*0.40)}px JetBrains Mono`;
+  ctx.fillText(famLabel, cx, labelY);
+  labelY += lineH * 0.95;
+
+  // Win count — bright white, large
+  ctx.fillStyle='#ffffff';
+  ctx.font=`bold ${Math.round(size*0.56)}px JetBrains Mono`;
+  ctx.fillText(`${wins} wins`, cx, labelY);
+  labelY += lineH * 0.88;
+
+  // Percentage — medal color tint
+  ctx.fillStyle=medalCol+'cc';
+  ctx.font=`${Math.round(size*0.28)}px JetBrains Mono`;
+  ctx.fillText(`${((wins/TOTAL_JOINTS)*100).toFixed(0)}% of joints`, cx, labelY);
+  labelY += lineH * 0.78;
+
+  // 128/256 breakdown — accent color dimmed
+  const bdEntries=Object.entries(breakdown);
+  ctx.font=`${Math.round(size*0.24)}px JetBrains Mono`;
+  ctx.fillStyle=accentCol+'77';
+  const bdStr=bdEntries.map(([m,w])=>m.replace('ptun-','').split('-').pop()+': '+w).join('  ');
+  ctx.fillText(bdStr, cx, labelY);
+
+  ctx.textAlign='left';
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+
+  anim=Math.min(1,anim+0.014);
+  const ease=1-Math.pow(1-anim,3);
+
+  const SHELF_H = Math.min(H * 0.52, 340);
+  const barArea = H - SHELF_H - 20;
+  const nF      = FAMILIES.length;
+  const barH    = Math.min(60, barArea / nF - 10);
+  const top     = SHELF_H + 16, ml = W * 0.24;
+  const maxBarW = (W - ml - 60) * ease;
+
+  // ── Trophy shelf background ──────────────────────────────
+  ctx.fillStyle = 'rgba(4,15,35,0.75)';
+  ctx.fillRect(0, 0, W, SHELF_H);
+  ctx.strokeStyle = 'rgba(76,201,240,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, SHELF_H); ctx.lineTo(W, SHELF_H); ctx.stroke();
+
+  // NOTE: page title is rendered by HTML #ui overlay — no canvas title needed
+  // Draw a minimal subtitle inside the shelf at top-left
+  ctx.fillStyle = '#F72585'; ctx.font = 'bold 26px JetBrains Mono';
+  ctx.fillText('ENCODER LEADERBOARD', 28, 36);
+  ctx.fillStyle = 'rgba(76,201,240,0.45)'; ctx.font = '14px JetBrains Mono';
+  ctx.fillText(`${TOTAL_JOINTS} moving joints · 128 + 256 combined per family`, 28, 58);
+
+  // Trophy layout: cup body + labels must fit inside SHELF_H
+  // Give the HTML title ~80px at top, then split remaining shelf for trophies
+  const shelfUsable  = SHELF_H - 80;          // below the HTML title band
+  const trophyBodyH  = shelfUsable * 0.30;    // cup height
+  const trophyCY     = 80 + trophyBodyH * 0.82; // cup center, well below title
+  const trophyXs     = [W * 0.32, W * 0.55, W * 0.76];
+  const trophySizes  = [trophyBodyH * 1.0, trophyBodyH * 0.82, trophyBodyH * 0.74];
+
+  [0,1,2].forEach(rank=>{
+    const f=FAMILIES[rank];
+    if(!f) return;
+    drawTrophy(
+      trophyXs[rank]*ease + (1-ease)*W*0.55,
+      trophyCY,
+      trophySizes[rank]*ease,
+      MEDAL[rank],   // trophy cup always gold/silver/bronze
+      f.color,       // encoder accent for name + breakdown text
+      rank, f.label, f.wins, f.breakdown
+    );
+    // Gold confetti from winner cup top
+    if(rank===0 && pTimer%10===0 && anim>0.80){
+      const cupTopY = trophyCY - trophySizes[0]*0.75;
+      spawnParticle(trophyXs[0]*ease+(1-ease)*W*0.55 + (Math.random()-0.5)*50,
+                    cupTopY, MEDAL[0]);
+    }
+  });
+
+  // Particles — gold stars/sparkles from winner
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life-=0.018;p.rot+=p.spin||0;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.globalAlpha=p.life;
+    if(p.glyph){
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      ctx.fillStyle=p.col;ctx.font=`bold ${Math.round(p.r*5)}px serif`;
+      ctx.textAlign='center';ctx.fillText(p.glyph,0,0);ctx.restore();
+    } else {
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=p.col;ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  pTimer++;
+
+  // ── Bar chart ──────────────────────────────────────────────
+  FAMILIES.forEach((f,i)=>{
+    const y=top+i*(barH+10);
+    const w=(f.wins/MAX_W)*maxBarW;
+    const col=f.color;
+    const isHov=hov===i;
+
+    if(isHov){ctx.shadowColor=col;ctx.shadowBlur=20;}
+
+    const grd=ctx.createLinearGradient(ml,0,ml+w,0);
+    grd.addColorStop(0,col+'ee');grd.addColorStop(1,col+'22');
+    ctx.fillStyle=grd;ctx.fillRect(ml,y,w,barH);
+    ctx.strokeStyle=col+'44';ctx.lineWidth=1;ctx.strokeRect(ml,y,w,barH);
+    ctx.shadowBlur=0;
+
+    // Rank # (large, left of bar)
+    ctx.fillStyle=isHov?col:'rgba(76,201,240,0.22)';
+    ctx.font=`bold ${isHov?30:26}px JetBrains Mono`;ctx.textAlign='right';
+    ctx.fillText(`#${i+1}`, ml-56, y+barH*0.62);
+
+    // Architecture name
+    ctx.fillStyle=col;ctx.font=`bold 20px JetBrains Mono`;ctx.textAlign='right';
+    ctx.fillText(f.label, ml-14, y+barH*0.62);
+    ctx.textAlign='left';
+
+    // 128/256 sub-label
+    const bdStr=Object.entries(f.breakdown).map(([m,w2])=>
+      m.replace('ptun-','').split('-').pop()+': '+w2).join('  ');
+    ctx.fillStyle=col+'66';ctx.font=`13px JetBrains Mono`;
+    ctx.fillText(bdStr, ml+8, y+barH*0.88);
+
+    // Wins + pct inside bar
+    ctx.fillStyle='rgba(255,255,255,0.92)';ctx.font=`bold 22px JetBrains Mono`;
+    ctx.fillText(`${f.wins}  (${((f.wins/TOTAL_JOINTS)*100).toFixed(0)}%)`, ml+14, y+barH*0.58);
+
+    // Tick at bar end
+    if(f.wins>0){
+      ctx.strokeStyle=col+'99';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(ml+w,y+5);ctx.lineTo(ml+w,y+barH-5);ctx.stroke();
+    }
+  });
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+</body></html>

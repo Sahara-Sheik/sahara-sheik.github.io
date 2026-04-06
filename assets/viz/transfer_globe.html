@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Cross-Robot Transfer Globe</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  canvas{display:block}
+  #ui{position:fixed;top:20px;left:28px;z-index:20}
+  #ttl{color:#F72585;font-size:32px;font-weight:800;letter-spacing:2px;
+        text-shadow:0 0 30px #F72585aa;margin-bottom:6px}
+  #sub{color:#4CC9F0;font-size:16px;letter-spacing:4px;text-transform:uppercase;opacity:.7}
+  #back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+         padding:6px 16px;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+         border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+         font-family:inherit;transition:all .2s;text-decoration:none}
+  #back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+  #tip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);
+        border:1px solid #1a3a5c;padding:10px 14px;font-size:17px;color:#aaa;
+        min-width:160px;box-shadow:0 0 20px #4CC9F015;z-index:40;line-height:1.7}
+  #tip b{color:#F72585}
+  #tip em{color:#4CC9F0}
+  #tip strong{color:#7BF1A8;font-size:22px}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="ui"><div id="ttl">Cross-Robot Transfer Globe</div><div id="sub">Encoder trained on one robot · regressed on another · RMSE from Table I</div></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+
+const NODES = [{"key": "AL5D", "label": "AL5D", "sub": "Real \u00b7 6-DOF", "x": 0.5, "y": 0.22}, {"key": "Unitree_G1", "label": "Unitree G1", "sub": "Sim  \u00b7 7-DOF", "x": 0.24, "y": 0.7}, {"key": "Franka_Panda", "label": "Franka Panda", "sub": "Real \u00b7 7-DOF", "x": 0.76, "y": 0.7}];
+const COLORS = {"AL5D": "#F72585", "Unitree_G1": "#4CC9F0", "Franka_Panda": "#FFD60A"};
+const ARCS   = [{"from": "AL5D", "to": "AL5D", "label": "Own", "winner": "vit-base-256", "wins": "2/6", "avg": 0.137, "cross": false}, {"from": "Unitree_G1", "to": "Unitree_G1", "label": "Own", "winner": "vgg19-256", "wins": "3/4", "avg": 0.0182, "cross": false}, {"from": "Franka_Panda", "to": "Franka_Panda", "label": "Own", "winner": "vit-base-128", "wins": "3/6", "avg": 0.0691, "cross": false}, {"from": "Unitree_G1", "to": "Franka_Panda", "label": "G1\u2192Franka", "winner": "vit-base-128", "wins": "2/6", "avg": 0.1152, "cross": true}, {"from": "Franka_Panda", "to": "Unitree_G1", "label": "Franka\u2192G1", "winner": "convvae-256", "wins": "2/4", "avg": 0.0629, "cross": true}];
+
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+let W,H,t=0;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+function rmseColor(v){
+  if(v===null) return '#888';
+  const t=Math.min(v/.35,1);
+  if(t<.5) return lerpCol('#7BF1A8','#FFD60A',t*2);
+  return lerpCol('#FFD60A','#F72585',(t-.5)*2);
+}
+function lerpCol(a,b,t){
+  const ah=a.replace('#',''),bh=b.replace('#','');
+  const ar=parseInt(ah.slice(0,2),16),ag=parseInt(ah.slice(2,4),16),ab=parseInt(ah.slice(4,6),16);
+  const br=parseInt(bh.slice(0,2),16),bg=parseInt(bh.slice(2,4),16),bb=parseInt(bh.slice(4,6),16);
+  return `rgb(${Math.round(ar+(br-ar)*t)},${Math.round(ag+(bg-ag)*t)},${Math.round(ab+(bb-ab)*t)})`;
+}
+
+function nodePos(n){
+  return{sx:W/2+(n.x-.5)*Math.min(W,H)*.55, sy:H/2+(n.y-.5)*Math.min(W,H)*.6};
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+
+  // Cross arcs
+  ARCS.filter(a=>a.cross).forEach((arc,ai)=>{
+    const fn=NODES.find(n=>n.key===arc.from),tn=NODES.find(n=>n.key===arc.to);
+    if(!fn||!tn) return;
+    const fp=nodePos(fn),tp_=nodePos(tn);
+    const col=rmseColor(arc.avg);
+    const mx=(fp.sx+tp_.sx)/2,my=(fp.sy+tp_.sy)/2-Math.min(W,H)*.18;
+
+    // Arc
+    ctx.beginPath();ctx.moveTo(fp.sx,fp.sy);
+    ctx.quadraticCurveTo(mx,my,tp_.sx,tp_.sy);
+    ctx.strokeStyle=col;ctx.lineWidth=2;ctx.globalAlpha=.45;
+    ctx.setLineDash([8,5]);ctx.stroke();ctx.setLineDash([]);
+
+    // Animated particle
+    const tp=(Math.sin(t*.015+ai*2.3)*.5+.5);
+    const px=(1-tp)*(1-tp)*fp.sx+2*(1-tp)*tp*mx+tp*tp*tp_.sx;
+    const py=(1-tp)*(1-tp)*fp.sy+2*(1-tp)*tp*my+tp*tp*tp_.sy;
+    ctx.beginPath();ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.globalAlpha=1;
+    ctx.shadowColor=col;ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+
+    // Label
+    ctx.globalAlpha=.75;ctx.fillStyle=col;
+    ctx.font='bold 16px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(arc.label,mx,my-16);
+    ctx.font='15px JetBrains Mono';
+    ctx.fillText(`${arc.winner} wins ${arc.wins}  avg RMSE: ${arc.avg!==null?arc.avg.toFixed(3):'?'}`,mx,my-4);
+    ctx.textAlign='left';ctx.globalAlpha=1;
+  });
+
+  // Self-loop rings + nodes
+  NODES.forEach(n=>{
+    const p=nodePos(n);
+    const col=COLORS[n.key]||'#888';
+    const ownArc=ARCS.find(a=>a.from===n.key&&!a.cross);
+
+    // Pulsing ring
+    const pulse=.55+.35*Math.sin(t*.04+n.x*6);
+    ctx.beginPath();ctx.arc(p.sx,p.sy,54+4*Math.sin(t*.025+n.y*5),0,Math.PI*2);
+    ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.globalAlpha=pulse*.35;ctx.stroke();ctx.globalAlpha=1;
+
+    // Glow
+    const gr=ctx.createRadialGradient(p.sx,p.sy,0,p.sx,p.sy,90);
+    gr.addColorStop(0,col+'28');gr.addColorStop(1,col+'00');
+    ctx.beginPath();ctx.arc(p.sx,p.sy,90,0,Math.PI*2);ctx.fillStyle=gr;ctx.fill();
+
+    // Circle
+    ctx.beginPath();ctx.arc(p.sx,p.sy,44,0,Math.PI*2);
+    ctx.fillStyle='#020810';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=2;
+    ctx.shadowColor=col;ctx.shadowBlur=18;ctx.stroke();ctx.shadowBlur=0;
+
+    // Text
+    ctx.fillStyle=col;ctx.font='bold 21px JetBrains Mono';ctx.textAlign='center';
+    ctx.fillText(n.label,p.sx,p.sy-4);
+    ctx.font='15px JetBrains Mono';ctx.fillStyle=col+'aa';
+    ctx.fillText(n.sub,p.sx,p.sy+10);
+    if(ownArc){
+      const oc=rmseColor(ownArc.avg);
+      ctx.fillStyle=oc;ctx.font='15px JetBrains Mono';
+      ctx.fillText(`★ ${ownArc.winner}`,p.sx,p.sy+58);
+      ctx.fillStyle='#4CC9F044';
+      ctx.fillText(`avg ${ownArc.avg!==null?ownArc.avg.toFixed(3):'?'}`,p.sx,p.sy+70);
+    }
+    ctx.textAlign='left';
+  });
+
+  // Color scale
+  const csX=W/2-100,csY=H-36;
+  const csg=ctx.createLinearGradient(csX,0,csX+200,0);
+  csg.addColorStop(0,'#F72585');csg.addColorStop(.5,'#FFD60A');csg.addColorStop(1,'#7BF1A8');
+  ctx.fillStyle=csg;ctx.fillRect(csX,csY-8,200,8);
+  ctx.fillStyle='#F72585';ctx.font='15px JetBrains Mono';ctx.textAlign='center';
+  ctx.fillText('HIGH RMSE',csX,csY+10);
+  ctx.fillStyle='#7BF1A8';ctx.fillText('LOW RMSE',csX+200,csY+10);
+  ctx.textAlign='left';
+
+  t++;requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+</body></html>

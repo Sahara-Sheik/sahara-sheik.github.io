@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Sensory Dome · 5376 Models</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#020810; overflow:hidden; font-family:'Courier New',monospace; }
+  canvas { display:block; }
+  #ui { position:fixed; inset:0; pointer-events:none; }
+
+  #header {
+    position:absolute; top:24px; left:50%; transform:translateX(-50%);
+    text-align:center;
+  }
+  #sup { color:#1a3a5c; font-size:14px; letter-spacing:5px; margin-bottom:8px; }
+  #counter { color:#F72585; font-size:78px; font-weight:900; line-height:1;
+    text-shadow:0 0 50px #F72585cc,0 0 100px #F7258544;
+    font-variant-numeric:tabular-nums; }
+  #sub { margin-top:6px; color:#4CC9F0; font-size:15px; letter-spacing:4px;
+    text-shadow:0 0 14px #4CC9F055; }
+
+  #legend {
+    position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+    display:flex; gap:20px; align-items:center; flex-wrap:wrap;
+    justify-content:center;
+  }
+  .li { display:flex; align-items:center; gap:7px; }
+  .ld { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+  .ln { color:#2a5a7a; font-size:13px; letter-spacing:2px; }
+
+  #axkey {
+    position:absolute; bottom:28px; right:22px; text-align:right;
+    color:#1a3a52; font-size:12px; letter-spacing:2px; line-height:2.2;
+  }
+
+  #tooltip {
+    position:absolute; display:none; pointer-events:none;
+    background:rgba(2,8,20,0.95); border:1px solid #1a3a5c;
+    padding:10px 14px; font-size:13px; color:#aaa; min-width:200px;
+    box-shadow:0 0 20px #4CC9F022;
+  }
+  #tooltip b { color:#4CC9F0; letter-spacing:2px; }
+  #tooltip .trow { display:flex; justify-content:space-between; gap:16px; margin-top:4px; }
+  #tooltip .tenc { color:#888; }
+  #tooltip .tval { font-weight:bold; }
+
+  #modes {
+    position:absolute; top:24px; right:22px;
+    display:flex; gap:6px; pointer-events:all;
+  }
+  .mbtn {
+    padding:8px 14px; font-size:12px; letter-spacing:3px;
+    font-family:inherit; cursor:pointer;
+    background:rgba(255,255,255,0.02); color:#2a5a7a;
+    border:1px solid #0d2a44; transition:all .2s;
+  }
+  .mbtn.active {
+    background:rgba(247,37,133,0.10); color:#F72585;
+    border-color:#F72585; box-shadow:0 0 14px #F7258533;
+  }
+
+  #caminfo {
+    position:absolute; top:24px; left:22px;
+    color:#1a3a52; font-size:12px; letter-spacing:2px; line-height:2;
+  }
+
+  #savebtn {
+    position:absolute; bottom:28px; left:22px;
+    pointer-events:all; cursor:pointer;
+    padding:10px 18px; font-size:13px; letter-spacing:3px;
+    font-family:'Courier New',monospace;
+    background:rgba(6,214,160,0.08); color:#06D6A0;
+    border:1px solid #06D6A0;
+    box-shadow:0 0 14px #06D6A022;
+    transition:all .2s;
+  }
+  #savebtn:hover {
+    background:rgba(6,214,160,0.18);
+    box-shadow:0 0 24px #06D6A055;
+  }
+  #savebtn.saving { color:#FFB703; border-color:#FFB703; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="header">
+    <div id="sup">ECCV 2026 · Domain Randomization · Visual Proprioception · UCF × TU Cluj-Napoca</div>
+    <div id="counter">5,376</div>
+    <div id="sub">112 CAMERA POSITIONS &nbsp;·&nbsp; 8 ENCODERS &nbsp;·&nbsp; 6 DATASETS</div>
+  </div>
+
+  <div id="modes">
+    <button class="mbtn active" onclick="setColor('encoder')">BY ENCODER</button>
+    <button class="mbtn"        onclick="setColor('dataset')">BY DATASET</button>
+  </div>
+
+  <div id="caminfo">
+    SENSORY DOME<br>
+    BAR HEIGHT = RMSE<br>
+    DOME NODE = CAMERA POSE
+  </div>
+
+  <div id="legend"></div>
+  <div id="axkey">
+    <span style="color:#F72585">▲</span> BAR HEIGHT = RMSE<br>
+    <span style="color:#4CC9F0">●</span> NODE = CAMERA POSITION<br>
+    <span style="color:#06D6A0">■</span> COLOR = ENCODER
+  </div>
+  <div id="tooltip"></div>
+  
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const REAL_DATA = {"ConvVAE-128|0": 0.26212, "ConvVAE-128|1": 0.26122, "ConvVAE-128|2": 0.25409, "ConvVAE-128|3": 0.26116, "ConvVAE-128|4": 0.26387, "ConvVAE-128|5": 0.2627, "ConvVAE-128|6": 0.25893, "ConvVAE-128|7": 0.25779, "ConvVAE-128|8": 0.26089, "ConvVAE-128|9": 0.25718, "ConvVAE-128|10": 0.25947, "ConvVAE-128|11": 0.26164, "ConvVAE-128|12": 0.25615, "ConvVAE-128|13": 0.26168, "ConvVAE-128|14": 0.26279, "ConvVAE-128|15": 0.25541, "ConvVAE-128|16": 0.25966, "ConvVAE-128|17": 0.27032, "ConvVAE-128|18": 0.25474, "ConvVAE-128|19": 0.24539, "ConvVAE-128|20": 0.24103, "ConvVAE-128|21": 0.24899, "ConvVAE-128|22": 0.24948, "ConvVAE-128|23": 0.27091, "ConvVAE-128|24": 0.25569, "ConvVAE-128|25": 0.26647, "ConvVAE-128|26": 0.25839, "ConvVAE-128|27": 0.26163, "ConvVAE-128|28": 0.25517, "ConvVAE-128|29": 0.26138, "ConvVAE-128|30": 0.24832, "ConvVAE-128|31": 0.24759, "ConvVAE-128|32": 0.24323, "ConvVAE-128|33": 0.253, "ConvVAE-128|34": 0.26828, "ConvVAE-128|35": 0.2566, "ConvVAE-128|36": 0.26283, "ConvVAE-128|37": 0.26358, "ConvVAE-128|38": 0.26121, "ConvVAE-128|39": 0.26591, "ConvVAE-128|40": 0.26887, "ConvVAE-128|41": 0.26559, "ConvVAE-128|42": 0.25254, "ConvVAE-128|43": 0.24477, "ConvVAE-128|44": 0.24735, "ConvVAE-128|45": 0.25178, "ConvVAE-128|46": 0.2609, "ConvVAE-128|47": 0.26164, "ConvVAE-128|48": 0.25049, "ConvVAE-128|49": 0.25314, "ConvVAE-128|50": 0.26788, "ConvVAE-128|51": 0.26356, "ConvVAE-128|52": 0.25492, "ConvVAE-128|53": 0.25689, "ConvVAE-128|54": 0.24222, "ConvVAE-128|55": 0.24551, "ConvVAE-128|56": 0.24715, "ConvVAE-128|57": 0.25837, "ConvVAE-128|58": 0.25706, "ConvVAE-128|59": 0.25592, "ConvVAE-128|60": 0.25241, "ConvVAE-128|61": 0.25482, "ConvVAE-128|62": 0.25824, "ConvVAE-128|63": 0.25515, "ConvVAE-128|64": 0.25505, "ConvVAE-128|65": 0.25953, "ConvVAE-128|66": 0.25152, "ConvVAE-128|67": 0.2519, "ConvVAE-128|68": 0.24866, "ConvVAE-128|69": 0.25533, "ConvVAE-128|70": 0.2584, "ConvVAE-128|71": 0.25498, "ConvVAE-128|72": 0.25347, "ConvVAE-128|73": 0.25241, "ConvVAE-128|74": 0.251, "ConvVAE-128|75": 0.25167, "ConvVAE-128|76": 0.2555, "ConvVAE-128|77": 0.24935, "ConvVAE-128|78": 0.25035, "ConvVAE-128|79": 0.25532, "ConvVAE-128|80": 0.25611, "ConvVAE-128|81": 0.25494, "ConvVAE-128|82": 0.25286, "ConvVAE-128|83": 0.25843, "ConvVAE-128|84": 0.25456, "ConvVAE-128|85": 0.24817, "ConvVAE-128|86": 0.25409, "ConvVAE-128|87": 0.2515, "ConvVAE-128|88": 0.25493, "ConvVAE-128|89": 0.2538, "ConvVAE-128|90": 0.25359, "ConvVAE-128|91": 0.26042, "ConvVAE-128|92": 0.25366, "ConvVAE-128|93": 0.25102, "ConvVAE-128|94": 0.25135, "ConvVAE-128|95": 0.25096, "ConvVAE-128|96": 0.24878, "ConvVAE-128|97": 0.24849, "ConvVAE-128|98": 0.25392, "ConvVAE-128|99": 0.24967, "ConvVAE-128|100": 0.25111, "ConvVAE-128|101": 0.25185, "ConvVAE-128|102": 0.24984, "ConvVAE-128|103": 0.2535, "ConvVAE-128|104": 0.25715, "ConvVAE-128|105": 0.24794, "ConvVAE-128|106": 0.25593, "ConvVAE-128|107": 0.2503, "ConvVAE-128|108": 0.25343, "ConvVAE-128|109": 0.25327, "ConvVAE-128|110": 0.25277, "ConvVAE-128|111": 0.25207, "ConvVAE-256|0": 0.25964, "ConvVAE-256|1": 0.26161, "ConvVAE-256|2": 0.26612, "ConvVAE-256|3": 0.26081, "ConvVAE-256|4": 0.26386, "ConvVAE-256|5": 0.26339, "ConvVAE-256|6": 0.25828, "ConvVAE-256|7": 0.25493, "ConvVAE-256|8": 0.25248, "ConvVAE-256|9": 0.25776, "ConvVAE-256|10": 0.2578, "ConvVAE-256|11": 0.25093, "ConvVAE-256|12": 0.25939, "ConvVAE-256|13": 0.26506, "ConvVAE-256|14": 0.25958, "ConvVAE-256|15": 0.25514, "ConvVAE-256|16": 0.25844, "ConvVAE-256|17": 0.26606, "ConvVAE-256|18": 0.25233, "ConvVAE-256|19": 0.24667, "ConvVAE-256|20": 0.2404, "ConvVAE-256|21": 0.24815, "ConvVAE-256|22": 0.25395, "ConvVAE-256|23": 0.25984, "ConvVAE-256|24": 0.27181, "ConvVAE-256|25": 0.26249, "ConvVAE-256|26": 0.26627, "ConvVAE-256|27": 0.25759, "ConvVAE-256|28": 0.25909, "ConvVAE-256|29": 0.25941, "ConvVAE-256|30": 0.24826, "ConvVAE-256|31": 0.25124, "ConvVAE-256|32": 0.24873, "ConvVAE-256|33": 0.24785, "ConvVAE-256|34": 0.25831, "ConvVAE-256|35": 0.26004, "ConvVAE-256|36": 0.2566, "ConvVAE-256|37": 0.27673, "ConvVAE-256|38": 0.27303, "ConvVAE-256|39": 0.26661, "ConvVAE-256|40": 0.26658, "ConvVAE-256|41": 0.25358, "ConvVAE-256|42": 0.24554, "ConvVAE-256|43": 0.24624, "ConvVAE-256|44": 0.24919, "ConvVAE-256|45": 0.25022, "ConvVAE-256|46": 0.2628, "ConvVAE-256|47": 0.26803, "ConvVAE-256|48": 0.2586, "ConvVAE-256|49": 0.26217, "ConvVAE-256|50": 0.25811, "ConvVAE-256|51": 0.26293, "ConvVAE-256|52": 0.25993, "ConvVAE-256|53": 0.26526, "ConvVAE-256|54": 0.24805, "ConvVAE-256|55": 0.25105, "ConvVAE-256|56": 0.25472, "ConvVAE-256|57": 0.25151, "ConvVAE-256|58": 0.26051, "ConvVAE-256|59": 0.25112, "ConvVAE-256|60": 0.25332, "ConvVAE-256|61": 0.25017, "ConvVAE-256|62": 0.25515, "ConvVAE-256|63": 0.25227, "ConvVAE-256|64": 0.25573, "ConvVAE-256|65": 0.25574, "ConvVAE-256|66": 0.25418, "ConvVAE-256|67": 0.24691, "ConvVAE-256|68": 0.25553, "ConvVAE-256|69": 0.25436, "ConvVAE-256|70": 0.25495, "ConvVAE-256|71": 0.25801, "ConvVAE-256|72": 0.25503, "ConvVAE-256|73": 0.25567, "ConvVAE-256|74": 0.25341, "ConvVAE-256|75": 0.24922, "ConvVAE-256|76": 0.25286, "ConvVAE-256|77": 0.25451, "ConvVAE-256|78": 0.25422, "ConvVAE-256|79": 0.25654, "ConvVAE-256|80": 0.25464, "ConvVAE-256|81": 0.254, "ConvVAE-256|82": 0.25479, "ConvVAE-256|83": 0.25616, "ConvVAE-256|84": 0.25257, "ConvVAE-256|85": 0.25308, "ConvVAE-256|86": 0.2499, "ConvVAE-256|87": 0.25039, "ConvVAE-256|88": 0.25534, "ConvVAE-256|89": 0.25724, "ConvVAE-256|90": 0.25396, "ConvVAE-256|91": 0.25429, "ConvVAE-256|92": 0.25495, "ConvVAE-256|93": 0.25629, "ConvVAE-256|94": 0.25549, "ConvVAE-256|95": 0.25717, "ConvVAE-256|96": 0.25262, "ConvVAE-256|97": 0.25294, "ConvVAE-256|98": 0.25404, "ConvVAE-256|99": 0.25326, "ConvVAE-256|100": 0.25187, "ConvVAE-256|101": 0.25226, "ConvVAE-256|102": 0.25625, "ConvVAE-256|103": 0.25252, "ConvVAE-256|104": 0.25586, "ConvVAE-256|105": 0.25355, "ConvVAE-256|106": 0.2545, "ConvVAE-256|107": 0.25673, "ConvVAE-256|108": 0.24881, "ConvVAE-256|109": 0.25281, "ConvVAE-256|110": 0.25347, "ConvVAE-256|111": 0.24942, "ResNet50-128|0": 0.25846, "ResNet50-128|1": 0.26168, "ResNet50-128|2": 0.25827, "ResNet50-128|3": 0.25219, "ResNet50-128|4": 0.2583, "ResNet50-128|5": 0.25989, "ResNet50-128|6": 0.25756, "ResNet50-128|7": 0.26429, "ResNet50-128|8": 0.26457, "ResNet50-128|9": 0.26609, "ResNet50-128|10": 0.26629, "ResNet50-128|11": 0.2682, "ResNet50-128|12": 0.27344, "ResNet50-128|13": 0.27607, "ResNet50-128|14": 0.27011, "ResNet50-128|15": 0.26766, "ResNet50-128|16": 0.27254, "ResNet50-128|17": 0.26884, "ResNet50-128|18": 0.26975, "ResNet50-128|19": 0.26373, "ResNet50-128|20": 0.26465, "ResNet50-128|21": 0.26193, "ResNet50-128|22": 0.27025, "ResNet50-128|23": 0.27295, "ResNet50-128|24": 0.27271, "ResNet50-128|25": 0.27074, "ResNet50-128|26": 0.2747, "ResNet50-128|27": 0.26914, "ResNet50-128|28": 0.26508, "ResNet50-128|29": 0.26507, "ResNet50-128|30": 0.26647, "ResNet50-128|31": 0.2606, "ResNet50-128|32": 0.26372, "ResNet50-128|33": 0.27261, "ResNet50-128|34": 0.2714, "ResNet50-128|35": 0.2676, "ResNet50-128|36": 0.27283, "ResNet50-128|37": 0.26977, "ResNet50-128|38": 0.2725, "ResNet50-128|39": 0.27151, "ResNet50-128|40": 0.26771, "ResNet50-128|41": 0.27013, "ResNet50-128|42": 0.26782, "ResNet50-128|43": 0.26976, "ResNet50-128|44": 0.26153, "ResNet50-128|45": 0.26936, "ResNet50-128|46": 0.26808, "ResNet50-128|47": 0.27072, "ResNet50-128|48": 0.2652, "ResNet50-128|49": 0.26483, "ResNet50-128|50": 0.2677, "ResNet50-128|51": 0.26633, "ResNet50-128|52": 0.26465, "ResNet50-128|53": 0.2683, "ResNet50-128|54": 0.2667, "ResNet50-128|55": 0.26371, "ResNet50-128|56": 0.24665, "ResNet50-128|57": 0.2552, "ResNet50-128|58": 0.26044, "ResNet50-128|59": 0.25626, "ResNet50-128|60": 0.25087, "ResNet50-128|61": 0.26228, "ResNet50-128|62": 0.25974, "ResNet50-128|63": 0.26392, "ResNet50-128|64": 0.26548, "ResNet50-128|65": 0.26633, "ResNet50-128|66": 0.26138, "ResNet50-128|67": 0.2627, "ResNet50-128|68": 0.26018, "ResNet50-128|69": 0.26835, "ResNet50-128|70": 0.2657, "ResNet50-128|71": 0.26791, "ResNet50-128|72": 0.26748, "ResNet50-128|73": 0.26655, "ResNet50-128|74": 0.26242, "ResNet50-128|75": 0.26659, "ResNet50-128|76": 0.26626, "ResNet50-128|77": 0.26222, "ResNet50-128|78": 0.26631, "ResNet50-128|79": 0.26679, "ResNet50-128|80": 0.26268, "ResNet50-128|81": 0.26623, "ResNet50-128|82": 0.26933, "ResNet50-128|83": 0.26624, "ResNet50-128|84": 0.26341, "ResNet50-128|85": 0.2659, "ResNet50-128|86": 0.26242, "ResNet50-128|87": 0.26381, "ResNet50-128|88": 0.26839, "ResNet50-128|89": 0.26657, "ResNet50-128|90": 0.27102, "ResNet50-128|91": 0.26724, "ResNet50-128|92": 0.268, "ResNet50-128|93": 0.27056, "ResNet50-128|94": 0.27398, "ResNet50-128|95": 0.2663, "ResNet50-128|96": 0.2663, "ResNet50-128|97": 0.25969, "ResNet50-128|98": 0.26389, "ResNet50-128|99": 0.2635, "ResNet50-128|100": 0.26617, "ResNet50-128|101": 0.26839, "ResNet50-128|102": 0.26947, "ResNet50-128|103": 0.26702, "ResNet50-128|104": 0.26795, "ResNet50-128|105": 0.2705, "ResNet50-128|106": 0.26117, "ResNet50-128|107": 0.26756, "ResNet50-128|108": 0.26548, "ResNet50-128|109": 0.26461, "ResNet50-128|110": 0.26311, "ResNet50-128|111": 0.26551, "ResNet50-256|0": 0.2616, "ResNet50-256|1": 0.25919, "ResNet50-256|2": 0.25692, "ResNet50-256|3": 0.25143, "ResNet50-256|4": 0.25681, "ResNet50-256|5": 0.26163, "ResNet50-256|6": 0.26182, "ResNet50-256|7": 0.26476, "ResNet50-256|8": 0.26625, "ResNet50-256|9": 0.26252, "ResNet50-256|10": 0.26612, "ResNet50-256|11": 0.2675, "ResNet50-256|12": 0.27073, "ResNet50-256|13": 0.27099, "ResNet50-256|14": 0.26719, "ResNet50-256|15": 0.27067, "ResNet50-256|16": 0.27113, "ResNet50-256|17": 0.27352, "ResNet50-256|18": 0.27544, "ResNet50-256|19": 0.2615, "ResNet50-256|20": 0.26194, "ResNet50-256|21": 0.26199, "ResNet50-256|22": 0.26409, "ResNet50-256|23": 0.27089, "ResNet50-256|24": 0.26882, "ResNet50-256|25": 0.26816, "ResNet50-256|26": 0.2706, "ResNet50-256|27": 0.27212, "ResNet50-256|28": 0.2684, "ResNet50-256|29": 0.26515, "ResNet50-256|30": 0.26807, "ResNet50-256|31": 0.26182, "ResNet50-256|32": 0.26334, "ResNet50-256|33": 0.26818, "ResNet50-256|34": 0.27045, "ResNet50-256|35": 0.26711, "ResNet50-256|36": 0.27063, "ResNet50-256|37": 0.2683, "ResNet50-256|38": 0.26971, "ResNet50-256|39": 0.26761, "ResNet50-256|40": 0.265, "ResNet50-256|41": 0.27017, "ResNet50-256|42": 0.26185, "ResNet50-256|43": 0.26696, "ResNet50-256|44": 0.25922, "ResNet50-256|45": 0.26774, "ResNet50-256|46": 0.27169, "ResNet50-256|47": 0.26884, "ResNet50-256|48": 0.26291, "ResNet50-256|49": 0.26644, "ResNet50-256|50": 0.26818, "ResNet50-256|51": 0.26739, "ResNet50-256|52": 0.26328, "ResNet50-256|53": 0.26418, "ResNet50-256|54": 0.26237, "ResNet50-256|55": 0.26267, "ResNet50-256|56": 0.24938, "ResNet50-256|57": 0.25258, "ResNet50-256|58": 0.25695, "ResNet50-256|59": 0.25664, "ResNet50-256|60": 0.25053, "ResNet50-256|61": 0.2689, "ResNet50-256|62": 0.26529, "ResNet50-256|63": 0.26548, "ResNet50-256|64": 0.26804, "ResNet50-256|65": 0.26482, "ResNet50-256|66": 0.26217, "ResNet50-256|67": 0.26556, "ResNet50-256|68": 0.26209, "ResNet50-256|69": 0.27118, "ResNet50-256|70": 0.27054, "ResNet50-256|71": 0.26781, "ResNet50-256|72": 0.26687, "ResNet50-256|73": 0.26401, "ResNet50-256|74": 0.26785, "ResNet50-256|75": 0.26503, "ResNet50-256|76": 0.26937, "ResNet50-256|77": 0.26431, "ResNet50-256|78": 0.26309, "ResNet50-256|79": 0.26216, "ResNet50-256|80": 0.26846, "ResNet50-256|81": 0.26564, "ResNet50-256|82": 0.27115, "ResNet50-256|83": 0.26594, "ResNet50-256|84": 0.26855, "ResNet50-256|85": 0.26443, "ResNet50-256|86": 0.2609, "ResNet50-256|87": 0.26718, "ResNet50-256|88": 0.26871, "ResNet50-256|89": 0.26918, "ResNet50-256|90": 0.27014, "ResNet50-256|91": 0.26777, "ResNet50-256|92": 0.26765, "ResNet50-256|93": 0.26739, "ResNet50-256|94": 0.27258, "ResNet50-256|95": 0.26488, "ResNet50-256|96": 0.26367, "ResNet50-256|97": 0.26533, "ResNet50-256|98": 0.26754, "ResNet50-256|99": 0.26689, "ResNet50-256|100": 0.26951, "ResNet50-256|101": 0.26999, "ResNet50-256|102": 0.26704, "ResNet50-256|103": 0.26365, "ResNet50-256|104": 0.26726, "ResNet50-256|105": 0.27072, "ResNet50-256|106": 0.27045, "ResNet50-256|107": 0.26376, "ResNet50-256|108": 0.26753, "ResNet50-256|109": 0.26714, "ResNet50-256|110": 0.26349, "ResNet50-256|111": 0.26937, "VGG19-128|0": 0.19379, "VGG19-128|1": 0.19798, "VGG19-128|2": 0.19668, "VGG19-128|3": 0.2034, "VGG19-128|4": 0.21109, "VGG19-128|5": 0.21488, "VGG19-128|6": 0.21947, "VGG19-128|7": 0.20347, "VGG19-128|8": 0.20469, "VGG19-128|9": 0.20165, "VGG19-128|10": 0.19619, "VGG19-128|11": 0.19247, "VGG19-128|12": 0.20256, "VGG19-128|13": 0.20848, "VGG19-128|14": 0.19865, "VGG19-128|15": 0.20159, "VGG19-128|16": 0.20136, "VGG19-128|17": 0.20582, "VGG19-128|18": 0.2005, "VGG19-128|19": 0.19551, "VGG19-128|20": 0.19772, "VGG19-128|21": 0.19438, "VGG19-128|22": 0.19568, "VGG19-128|23": 0.19901, "VGG19-128|24": 0.18983, "VGG19-128|25": 0.19677, "VGG19-128|26": 0.20072, "VGG19-128|27": 0.19641, "VGG19-128|28": 0.19999, "VGG19-128|29": 0.19243, "VGG19-128|30": 0.19991, "VGG19-128|31": 0.19753, "VGG19-128|32": 0.2014, "VGG19-128|33": 0.18962, "VGG19-128|34": 0.19127, "VGG19-128|35": 0.20227, "VGG19-128|36": 0.19433, "VGG19-128|37": 0.20417, "VGG19-128|38": 0.19946, "VGG19-128|39": 0.19549, "VGG19-128|40": 0.2013, "VGG19-128|41": 0.1967, "VGG19-128|42": 0.19749, "VGG19-128|43": 0.19886, "VGG19-128|44": 0.20196, "VGG19-128|45": 0.19294, "VGG19-128|46": 0.19164, "VGG19-128|47": 0.19068, "VGG19-128|48": 0.19873, "VGG19-128|49": 0.19882, "VGG19-128|50": 0.19862, "VGG19-128|51": 0.19291, "VGG19-128|52": 0.1904, "VGG19-128|53": 0.19342, "VGG19-128|54": 0.19433, "VGG19-128|55": 0.19603, "VGG19-128|56": 0.20097, "VGG19-128|57": 0.19584, "VGG19-128|58": 0.19079, "VGG19-128|59": 0.19315, "VGG19-128|60": 0.19968, "VGG19-128|61": 0.20125, "VGG19-128|62": 0.19943, "VGG19-128|63": 0.19737, "VGG19-128|64": 0.19682, "VGG19-128|65": 0.19208, "VGG19-128|66": 0.19275, "VGG19-128|67": 0.19493, "VGG19-128|68": 0.19612, "VGG19-128|69": 0.19625, "VGG19-128|70": 0.18871, "VGG19-128|71": 0.19021, "VGG19-128|72": 0.19713, "VGG19-128|73": 0.19566, "VGG19-128|74": 0.19818, "VGG19-128|75": 0.2057, "VGG19-128|76": 0.19366, "VGG19-128|77": 0.19509, "VGG19-128|78": 0.19389, "VGG19-128|79": 0.19577, "VGG19-128|80": 0.19273, "VGG19-128|81": 0.19659, "VGG19-128|82": 0.19231, "VGG19-128|83": 0.1903, "VGG19-128|84": 0.19844, "VGG19-128|85": 0.19511, "VGG19-128|86": 0.20218, "VGG19-128|87": 0.19798, "VGG19-128|88": 0.1929, "VGG19-128|89": 0.19545, "VGG19-128|90": 0.19421, "VGG19-128|91": 0.18839, "VGG19-128|92": 0.19542, "VGG19-128|93": 0.1946, "VGG19-128|94": 0.19557, "VGG19-128|95": 0.19334, "VGG19-128|96": 0.19378, "VGG19-128|97": 0.19755, "VGG19-128|98": 0.19806, "VGG19-128|99": 0.1965, "VGG19-128|100": 0.19486, "VGG19-128|101": 0.19037, "VGG19-128|102": 0.19146, "VGG19-128|103": 0.19691, "VGG19-128|104": 0.19399, "VGG19-128|105": 0.19846, "VGG19-128|106": 0.19794, "VGG19-128|107": 0.18941, "VGG19-128|108": 0.1917, "VGG19-128|109": 0.19787, "VGG19-128|110": 0.20018, "VGG19-128|111": 0.19914, "VGG19-256|0": 0.19764, "VGG19-256|1": 0.19876, "VGG19-256|2": 0.19269, "VGG19-256|3": 0.19997, "VGG19-256|4": 0.2051, "VGG19-256|5": 0.21275, "VGG19-256|6": 0.21225, "VGG19-256|7": 0.20587, "VGG19-256|8": 0.20386, "VGG19-256|9": 0.19986, "VGG19-256|10": 0.1989, "VGG19-256|11": 0.19229, "VGG19-256|12": 0.19715, "VGG19-256|13": 0.19925, "VGG19-256|14": 0.20448, "VGG19-256|15": 0.19585, "VGG19-256|16": 0.20863, "VGG19-256|17": 0.20182, "VGG19-256|18": 0.19846, "VGG19-256|19": 0.20055, "VGG19-256|20": 0.19976, "VGG19-256|21": 0.19608, "VGG19-256|22": 0.19965, "VGG19-256|23": 0.19582, "VGG19-256|24": 0.19025, "VGG19-256|25": 0.1969, "VGG19-256|26": 0.20235, "VGG19-256|27": 0.19863, "VGG19-256|28": 0.19977, "VGG19-256|29": 0.1924, "VGG19-256|30": 0.19334, "VGG19-256|31": 0.19862, "VGG19-256|32": 0.1954, "VGG19-256|33": 0.19368, "VGG19-256|34": 0.18871, "VGG19-256|35": 0.19515, "VGG19-256|36": 0.20248, "VGG19-256|37": 0.20143, "VGG19-256|38": 0.19862, "VGG19-256|39": 0.19117, "VGG19-256|40": 0.19774, "VGG19-256|41": 0.19584, "VGG19-256|42": 0.19723, "VGG19-256|43": 0.19843, "VGG19-256|44": 0.20316, "VGG19-256|45": 0.1981, "VGG19-256|46": 0.1972, "VGG19-256|47": 0.19675, "VGG19-256|48": 0.1953, "VGG19-256|49": 0.19967, "VGG19-256|50": 0.1966, "VGG19-256|51": 0.1908, "VGG19-256|52": 0.18992, "VGG19-256|53": 0.19048, "VGG19-256|54": 0.19192, "VGG19-256|55": 0.19563, "VGG19-256|56": 0.19832, "VGG19-256|57": 0.19738, "VGG19-256|58": 0.19668, "VGG19-256|59": 0.19166, "VGG19-256|60": 0.19158, "VGG19-256|61": 0.19606, "VGG19-256|62": 0.20037, "VGG19-256|63": 0.19245, "VGG19-256|64": 0.196, "VGG19-256|65": 0.19603, "VGG19-256|66": 0.19413, "VGG19-256|67": 0.19113, "VGG19-256|68": 0.1954, "VGG19-256|69": 0.19269, "VGG19-256|70": 0.19356, "VGG19-256|71": 0.18732, "VGG19-256|72": 0.19473, "VGG19-256|73": 0.20217, "VGG19-256|74": 0.20054, "VGG19-256|75": 0.19976, "VGG19-256|76": 0.19096, "VGG19-256|77": 0.19322, "VGG19-256|78": 0.19109, "VGG19-256|79": 0.19285, "VGG19-256|80": 0.19368, "VGG19-256|81": 0.19659, "VGG19-256|82": 0.18573, "VGG19-256|83": 0.1916, "VGG19-256|84": 0.1971, "VGG19-256|85": 0.19916, "VGG19-256|86": 0.2016, "VGG19-256|87": 0.19697, "VGG19-256|88": 0.1909, "VGG19-256|89": 0.19115, "VGG19-256|90": 0.19233, "VGG19-256|91": 0.18792, "VGG19-256|92": 0.19184, "VGG19-256|93": 0.19356, "VGG19-256|94": 0.19071, "VGG19-256|95": 0.19509, "VGG19-256|96": 0.18777, "VGG19-256|97": 0.1915, "VGG19-256|98": 0.19634, "VGG19-256|99": 0.19803, "VGG19-256|100": 0.19334, "VGG19-256|101": 0.19121, "VGG19-256|102": 0.19145, "VGG19-256|103": 0.19581, "VGG19-256|104": 0.19309, "VGG19-256|105": 0.20062, "VGG19-256|106": 0.19789, "VGG19-256|107": 0.18967, "VGG19-256|108": 0.18846, "VGG19-256|109": 0.19553, "VGG19-256|110": 0.19866, "VGG19-256|111": 0.19821, "ViT-128|0": 0.20226, "ViT-128|1": 0.20611, "ViT-128|2": 0.2077, "ViT-128|3": 0.20554, "ViT-128|4": 0.20951, "ViT-128|5": 0.22407, "ViT-128|6": 0.22094, "ViT-128|7": 0.21199, "ViT-128|8": 0.21261, "ViT-128|9": 0.20557, "ViT-128|10": 0.2162, "ViT-128|11": 0.21157, "ViT-128|12": 0.19484, "ViT-128|13": 0.19246, "ViT-128|14": 0.18749, "ViT-128|15": 0.1944, "ViT-128|16": 0.2067, "ViT-128|17": 0.21415, "ViT-128|18": 0.2061, "ViT-128|19": 0.20084, "ViT-128|20": 0.19258, "ViT-128|21": 0.19749, "ViT-128|22": 0.19685, "ViT-128|23": 0.1911, "ViT-128|24": 0.20034, "ViT-128|25": 0.20286, "ViT-128|26": 0.19115, "ViT-128|27": 0.18831, "ViT-128|28": 0.19165, "ViT-128|29": 0.20129, "ViT-128|30": 0.20048, "ViT-128|31": 0.19986, "ViT-128|32": 0.18973, "ViT-128|33": 0.19556, "ViT-128|34": 0.19256, "ViT-128|35": 0.20337, "ViT-128|36": 0.19603, "ViT-128|37": 0.20674, "ViT-128|38": 0.1961, "ViT-128|39": 0.20326, "ViT-128|40": 0.19607, "ViT-128|41": 0.19807, "ViT-128|42": 0.19199, "ViT-128|43": 0.19938, "ViT-128|44": 0.20407, "ViT-128|45": 0.20541, "ViT-128|46": 0.19436, "ViT-128|47": 0.20339, "ViT-128|48": 0.20769, "ViT-128|49": 0.20617, "ViT-128|50": 0.19376, "ViT-128|51": 0.19736, "ViT-128|52": 0.19765, "ViT-128|53": 0.19305, "ViT-128|54": 0.1806, "ViT-128|55": 0.18803, "ViT-128|56": 0.19731, "ViT-128|57": 0.20257, "ViT-128|58": 0.204, "ViT-128|59": 0.20455, "ViT-128|60": 0.19468, "ViT-128|61": 0.20001, "ViT-128|62": 0.19868, "ViT-128|63": 0.1932, "ViT-128|64": 0.19739, "ViT-128|65": 0.18709, "ViT-128|66": 0.18909, "ViT-128|67": 0.18805, "ViT-128|68": 0.20207, "ViT-128|69": 0.1955, "ViT-128|70": 0.20108, "ViT-128|71": 0.19801, "ViT-128|72": 0.2032, "ViT-128|73": 0.21608, "ViT-128|74": 0.2039, "ViT-128|75": 0.20533, "ViT-128|76": 0.21694, "ViT-128|77": 0.20701, "ViT-128|78": 0.19775, "ViT-128|79": 0.20045, "ViT-128|80": 0.19313, "ViT-128|81": 0.20933, "ViT-128|82": 0.20368, "ViT-128|83": 0.2179, "ViT-128|84": 0.21531, "ViT-128|85": 0.21501, "ViT-128|86": 0.20417, "ViT-128|87": 0.20335, "ViT-128|88": 0.20481, "ViT-128|89": 0.19225, "ViT-128|90": 0.19301, "ViT-128|91": 0.20043, "ViT-128|92": 0.20479, "ViT-128|93": 0.20484, "ViT-128|94": 0.22053, "ViT-128|95": 0.21622, "ViT-128|96": 0.20084, "ViT-128|97": 0.20168, "ViT-128|98": 0.20279, "ViT-128|99": 0.21207, "ViT-128|100": 0.20188, "ViT-128|101": 0.20023, "ViT-128|102": 0.20484, "ViT-128|103": 0.20748, "ViT-128|104": 0.20682, "ViT-128|105": 0.20367, "ViT-128|106": 0.20764, "ViT-128|107": 0.21935, "ViT-128|108": 0.21859, "ViT-128|109": 0.20753, "ViT-128|110": 0.20837, "ViT-128|111": 0.21745, "ViT-256|0": 0.21599, "ViT-256|1": 0.19855, "ViT-256|2": 0.20165, "ViT-256|3": 0.20378, "ViT-256|4": 0.20899, "ViT-256|5": 0.22549, "ViT-256|6": 0.2125, "ViT-256|7": 0.20902, "ViT-256|8": 0.20734, "ViT-256|9": 0.2079, "ViT-256|10": 0.20662, "ViT-256|11": 0.19906, "ViT-256|12": 0.19018, "ViT-256|13": 0.18007, "ViT-256|14": 0.18664, "ViT-256|15": 0.19086, "ViT-256|16": 0.20326, "ViT-256|17": 0.21336, "ViT-256|18": 0.20767, "ViT-256|19": 0.19945, "ViT-256|20": 0.19719, "ViT-256|21": 0.2003, "ViT-256|22": 0.19506, "ViT-256|23": 0.1898, "ViT-256|24": 0.19037, "ViT-256|25": 0.19744, "ViT-256|26": 0.18767, "ViT-256|27": 0.18469, "ViT-256|28": 0.19888, "ViT-256|29": 0.19875, "ViT-256|30": 0.19011, "ViT-256|31": 0.19726, "ViT-256|32": 0.19128, "ViT-256|33": 0.19005, "ViT-256|34": 0.18758, "ViT-256|35": 0.18811, "ViT-256|36": 0.19545, "ViT-256|37": 0.19762, "ViT-256|38": 0.19151, "ViT-256|39": 0.19591, "ViT-256|40": 0.19131, "ViT-256|41": 0.21021, "ViT-256|42": 0.19409, "ViT-256|43": 0.19403, "ViT-256|44": 0.20009, "ViT-256|45": 0.19191, "ViT-256|46": 0.19628, "ViT-256|47": 0.19951, "ViT-256|48": 0.19973, "ViT-256|49": 0.20348, "ViT-256|50": 0.19829, "ViT-256|51": 0.19399, "ViT-256|52": 0.19522, "ViT-256|53": 0.19329, "ViT-256|54": 0.18772, "ViT-256|55": 0.18393, "ViT-256|56": 0.19516, "ViT-256|57": 0.20036, "ViT-256|58": 0.19496, "ViT-256|59": 0.19965, "ViT-256|60": 0.19585, "ViT-256|61": 0.19949, "ViT-256|62": 0.20078, "ViT-256|63": 0.19393, "ViT-256|64": 0.2012, "ViT-256|65": 0.18192, "ViT-256|66": 0.19042, "ViT-256|67": 0.1884, "ViT-256|68": 0.19357, "ViT-256|69": 0.19851, "ViT-256|70": 0.19633, "ViT-256|71": 0.19757, "ViT-256|72": 0.2023, "ViT-256|73": 0.20633, "ViT-256|74": 0.20384, "ViT-256|75": 0.21333, "ViT-256|76": 0.20594, "ViT-256|77": 0.19204, "ViT-256|78": 0.1942, "ViT-256|79": 0.19654, "ViT-256|80": 0.1988, "ViT-256|81": 0.202, "ViT-256|82": 0.20399, "ViT-256|83": 0.21759, "ViT-256|84": 0.21078, "ViT-256|85": 0.20664, "ViT-256|86": 0.21226, "ViT-256|87": 0.20934, "ViT-256|88": 0.20305, "ViT-256|89": 0.19609, "ViT-256|90": 0.19692, "ViT-256|91": 0.19817, "ViT-256|92": 0.20027, "ViT-256|93": 0.20984, "ViT-256|94": 0.2114, "ViT-256|95": 0.20913, "ViT-256|96": 0.21299, "ViT-256|97": 0.21252, "ViT-256|98": 0.20321, "ViT-256|99": 0.20353, "ViT-256|100": 0.20857, "ViT-256|101": 0.20276, "ViT-256|102": 0.2067, "ViT-256|103": 0.20335, "ViT-256|104": 0.20374, "ViT-256|105": 0.20924, "ViT-256|106": 0.2116, "ViT-256|107": 0.20828, "ViT-256|108": 0.22186, "ViT-256|109": 0.21275, "ViT-256|110": 0.20834, "ViT-256|111": 0.20537, "ViT_128|0": 0.24269, "ViT_128|1": 0.18721, "ViT_128|2": 0.18334, "ViT_128|3": 0.19265, "ViT_128|4": 0.18829, "ViT_128|5": 0.18168, "ViT_128|6": 0.18886, "ViT_128|7": 0.17469, "ViT_128|8": 0.1782, "ViT_128|9": 0.19563, "ViT_128|10": 0.19965, "ViT_128|11": 0.18152, "ViT_128|12": 0.18618, "ViT_128|13": 0.18547, "ViT_128|14": 0.19361, "ViT_128|15": 0.20114, "ViT_128|16": 0.19419, "ViT_128|17": 0.19113, "ViT_128|18": 0.19188, "ViT_128|19": 0.17975, "ViT_128|20": 0.17897, "ViT_128|21": 0.17783, "ViT_128|22": 0.18869, "ViT_128|23": 0.18075, "ViT_128|24": 0.19619, "ViT_128|25": 0.19351, "ViT_128|26": 0.17566, "ViT_128|27": 0.19791, "ViT_128|28": 0.18869, "ViT_128|29": 0.18834, "ViT_128|30": 0.19689, "ViT_128|31": 0.18769, "ViT_128|32": 0.18714, "ViT_128|33": 0.18141, "ViT_128|34": 0.19197, "ViT_128|35": 0.1812, "ViT_128|36": 0.19365, "ViT_128|37": 0.18813, "ViT_128|38": 0.18543, "ViT_128|39": 0.17962, "ViT_128|40": 0.1891, "ViT_128|41": 0.18233, "ViT_128|42": 0.20512, "ViT_128|43": 0.18464, "ViT_128|44": 0.19869, "ViT_128|45": 0.17837, "ViT_128|46": 0.18605, "ViT_128|47": 0.18239, "ViT_128|48": 0.1972, "ViT_128|49": 0.19491, "ViT_128|50": 0.18433, "ViT_128|51": 0.18445, "ViT_128|52": 0.18661, "ViT_128|53": 0.178, "ViT_128|54": 0.19192, "ViT_128|55": 0.16802, "ViT_128|56": 0.17994, "ViT_128|57": 0.17715, "ViT_128|58": 0.18422, "ViT_128|59": 0.1859, "ViT_128|60": 0.20028, "ViT_128|61": 0.18796, "ViT_128|62": 0.18323, "ViT_128|63": 0.18631, "ViT_128|64": 0.18913, "ViT_128|65": 0.18554, "ViT_128|66": 0.17413, "ViT_128|67": 0.17111, "ViT_128|68": 0.18237, "ViT_128|69": 0.1897, "ViT_128|70": 0.19634, "ViT_128|71": 0.18711, "ViT_128|72": 0.18161, "ViT_128|73": 0.17144, "ViT_128|74": 0.18506, "ViT_128|75": 0.19124, "ViT_128|76": 0.18587, "ViT_128|77": 0.18876, "ViT_128|78": 0.18234, "ViT_128|79": 0.17943, "ViT_128|80": 0.17725, "ViT_128|81": 0.18724, "ViT_128|82": 0.18261, "ViT_128|83": 0.1817, "ViT_128|84": 0.18436, "ViT_128|85": 0.19363, "ViT_128|86": 0.19305, "ViT_128|87": 0.19925, "ViT_128|88": 0.19544, "ViT_128|89": 0.19353, "ViT_128|90": 0.20321, "ViT_128|91": 0.18075, "ViT_128|92": 0.17778, "ViT_128|93": 0.19331, "ViT_128|94": 0.18612, "ViT_128|95": 0.19158, "ViT_128|96": 0.19587, "ViT_128|97": 0.19454, "ViT_128|98": 0.19291, "ViT_128|99": 0.1939, "ViT_128|100": 0.1963, "ViT_128|101": 0.19601, "ViT_128|102": 0.19303, "ViT_128|103": 0.18876, "ViT_128|104": 0.19467, "ViT_128|105": 0.19558, "ViT_128|106": 0.19408, "ViT_128|107": 0.19311, "ViT_128|108": 0.20403, "ViT_128|109": 0.20573, "ViT_128|110": 0.2067, "ViT_128|111": 0.20313};  // injected — 1008 points
+
+
+function saveImage() {
+  const btn = document.getElementById('savebtn');
+  btn.textContent = '⏳ SAVING...';
+  btn.disabled = true;
+
+  // Force a render right now
+  renderer.render(scene, cam);
+
+  // toDataURL works because preserveDrawingBuffer:true
+  canvas.toBlob(function(blob) {
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = 'sensory_dome_5376_models.png';
+    link.click();
+    URL.revokeObjectURL(url);
+    btn.textContent = '⬇ SAVE PNG';
+    btn.disabled = false;
+  }, 'image/png');
+}
+
+
+
+// ═══════════════════════════════════════════════════════════
+//  INJECT YOUR REAL DATA HERE
+//  Run this Python snippet to generate REAL_DATA from your models_summary.csv:
+//
+//  import pandas as pd, json
+//  df = pd.read_csv("models_summary.csv")
+//  out = {}
+//  for (enc, cam), g in df.groupby(["encoder","camera"]):
+//      key = f"{enc}|{cam}"
+//      out[key] = round(g.rmse_overall.mean(), 5)
+//  print(json.dumps(out))
+//
+//  Then paste the result below replacing REAL_DATA = null
+// ═══════════════════════════════════════════════════════════
+
+// ── ENCODERS & DATASETS ───────────────────────────────────
+const ENCODERS = ["ConvVAE-128","ConvVAE-256","ResNet50-128","ResNet50-256",
+                  "VGG19-128","VGG19-256","ViT-128","ViT-256"];
+const DATASETS = ["TUCN_background_nocams","all_cnns_hack_train","black_simple",
+                  "cams_TUCN_background","cams_no_background","cvpr-white"];
+
+const ENC_COLORS = {
+  "ConvVAE-128" : 0x4361EE, "ConvVAE-256" : 0x3A0CA3,
+  "ResNet50-128": 0xF72585, "ResNet50-256" : 0xB5179E,
+  "VGG19-128"   : 0x4CC9F0, "VGG19-256"   : 0x06D6A0,
+  "ViT-128"     : 0xFFB703, "ViT-256"      : 0xFB8500,
+};
+const ENC_CSS = {
+  "ConvVAE-128":"#4361EE","ConvVAE-256":"#3A0CA3",
+  "ResNet50-128":"#F72585","ResNet50-256":"#B5179E",
+  "VGG19-128":"#4CC9F0","VGG19-256":"#06D6A0",
+  "ViT-128":"#FFB703","ViT-256":"#FB8500",
+};
+const DS_COLORS = {
+  "TUCN_background_nocams":"#F72585","all_cnns_hack_train":"#4361EE",
+  "black_simple":"#4CC9F0","cams_TUCN_background":"#06D6A0",
+  "cams_no_background":"#B5179E","cvpr-white":"#FFB703",
+};
+
+// ── SYNTHETIC DATA (used when REAL_DATA is null) ──────────
+function makeSyntheticData() {
+  const d = {};
+  const baseRMSE = {
+    "ConvVAE-128":0.200,"ConvVAE-256":0.185,
+    "ResNet50-128":0.155,"ResNet50-256":0.140,
+    "VGG19-128":0.145,"VGG19-256":0.130,
+    "ViT-128":0.125,"ViT-256":0.115,
+  };
+  let seed = 42;
+  const rng = () => { seed=(seed*16807)%2147483647; return (seed-1)/2147483646; };
+
+  // camera positions on hemisphere (same as dome nodes)
+  for (let cam = 0; cam < 112; cam++) {
+    const t  = cam / 111;
+    const el = t * Math.PI * 0.5;  // elevation 0=equator, π/2=zenith
+    const camDifficulty = 0.6 + 0.4 * (1 - t); // equator harder
+
+    ENCODERS.forEach(enc => {
+      const noise = (rng() - 0.5) * 0.04;
+      const val   = Math.max(0.04, baseRMSE[enc] * camDifficulty + noise);
+      d[`${enc}|${cam}`] = +val.toFixed(5);
+    });
+  }
+  return d;
+}
+
+const DATA = REAL_DATA || makeSyntheticData();
+
+function getRMSE(enc, cam) {
+  return DATA[`${enc}|${cam}`] || 0.15;
+}
+
+// ── BUILD LEGEND ─────────────────────────────────────────
+let colorMode = 'encoder';
+function buildLegend(mode) {
+  const leg = document.getElementById('legend');
+  const items = mode === 'encoder'
+    ? ENCODERS.map(e => [e, ENC_CSS[e]])
+    : DATASETS.map(d => [d, DS_COLORS[d]]);
+  leg.innerHTML = items.map(([name, c]) =>
+    `<div class="li">
+       <div class="ld" style="background:${c};box-shadow:0 0 8px ${c}"></div>
+       <span class="ln">${name}</span>
+     </div>`
+  ).join('');
+}
+buildLegend('encoder');
+
+// ── THREE.JS ──────────────────────────────────────────────
+const canvas   = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x020810);
+scene.fog        = new THREE.FogExp2(0x020810, 0.018);
+
+const cam = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
+cam.position.set(0, 8, 22);
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h);
+  cam.aspect = w/h;
+  cam.updateProjectionMatrix();
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── LIGHTS ────────────────────────────────────────────────
+scene.add(new THREE.AmbientLight(0x0a1830, 2.0));
+const sun = new THREE.DirectionalLight(0x6090cc, 1.5);
+sun.position.set(10, 20, 10);
+sun.castShadow = true;
+scene.add(sun);
+[[0xF72585,4,40, 0,12, 0],
+ [0x4CC9F0,3,40,12, 8,12],
+ [0x06D6A0,3,35,-12,8,-6],
+ [0xFFB703,2,30, 0, 4,14]].forEach(([c,i,d,x,y,z])=>{
+  const pl = new THREE.PointLight(c,i,d);
+  pl.position.set(x,y,z); scene.add(pl);
+});
+
+// ── DOME WIREFRAME ────────────────────────────────────────
+const DOME_R = 8;
+const domeGroup = new THREE.Group();
+scene.add(domeGroup);
+
+// Latitudinal rings (elevation bands)
+[15, 30, 45, 60, 75, 90].forEach(deg => {
+  const el = deg * Math.PI / 180;
+  const r  = DOME_R * Math.cos(el);
+  const y  = DOME_R * Math.sin(el);
+  const pts = [];
+  for (let a = 0; a <= 64; a++) {
+    const ang = (a / 64) * Math.PI * 2;
+    pts.push(new THREE.Vector3(Math.cos(ang)*r, y, Math.sin(ang)*r));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = new THREE.LineBasicMaterial({
+    color:0x0a2a4a, transparent:true,
+    opacity: deg === 90 ? 0.35 : 0.18
+  });
+  domeGroup.add(new THREE.Line(g, m));
+});
+
+// Meridional arcs
+for (let i = 0; i < 12; i++) {
+  const ang = (i / 12) * Math.PI * 2;
+  const pts = [];
+  for (let e = 0; e <= 32; e++) {
+    const el = (e / 32) * Math.PI * 0.5;
+    pts.push(new THREE.Vector3(
+      DOME_R * Math.cos(el) * Math.cos(ang),
+      DOME_R * Math.sin(el),
+      DOME_R * Math.cos(el) * Math.sin(ang)
+    ));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = new THREE.LineBasicMaterial({
+    color:0x0a2a4a, transparent:true, opacity:0.15
+  });
+  domeGroup.add(new THREE.Line(g, m));
+}
+
+// Floor ring
+{
+  const pts = [];
+  for (let a = 0; a <= 128; a++) {
+    const ang = (a/128)*Math.PI*2;
+    pts.push(new THREE.Vector3(Math.cos(ang)*DOME_R, 0, Math.sin(ang)*DOME_R));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = new THREE.LineBasicMaterial({color:0x1a4060, transparent:true, opacity:0.5});
+  domeGroup.add(new THREE.Line(g, m));
+}
+
+// Floor grid
+const floorGeo = new THREE.PlaneGeometry(DOME_R*2, DOME_R*2, 16, 16);
+const floorMat = new THREE.MeshBasicMaterial({
+  color:0x060e1a, wireframe:true, transparent:true, opacity:0.12
+});
+const floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI/2;
+domeGroup.add(floor);
+
+// ── ROBOT ARM PLACEHOLDER ─────────────────────────────────
+const robotGroup = new THREE.Group();
+scene.add(robotGroup);
+// Base
+const baseGeo = new THREE.CylinderGeometry(0.35, 0.45, 0.3, 16);
+const baseMat = new THREE.MeshStandardMaterial({
+  color:0x1a3a5c, emissive:0x0a1a2c, metalness:0.8, roughness:0.3
+});
+robotGroup.add(new THREE.Mesh(baseGeo, baseMat));
+// Link 1
+const l1g = new THREE.CylinderGeometry(0.12, 0.14, 1.4, 12);
+const l1  = new THREE.Mesh(l1g, baseMat);
+l1.position.set(0, 1.0, 0); l1.rotation.z = 0.3;
+robotGroup.add(l1);
+// Link 2
+const l2g = new THREE.CylinderGeometry(0.09, 0.12, 1.1, 12);
+const l2  = new THREE.Mesh(l2g, baseMat);
+l2.position.set(0.45, 1.8, 0); l2.rotation.z = -0.5;
+robotGroup.add(l2);
+// End effector glow
+const eeGeo = new THREE.SphereGeometry(0.12, 12, 12);
+const eeMat = new THREE.MeshBasicMaterial({color:0x4CC9F0});
+const ee    = new THREE.Mesh(eeGeo, eeMat);
+ee.position.set(0.85, 2.45, 0);
+robotGroup.add(ee);
+
+// ── FIBONACCI HEMISPHERE: 112 CAMERA POSITIONS ────────────
+function fibHemisphere(n, R) {
+  const pts = [], normals = [];
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < n; i++) {
+    const y    = i / (n - 1);                    // 0=equator  1=zenith
+    const r    = Math.sqrt(Math.max(0, 1 - y*y));
+    const theta= golden * i;
+    const nx   = r * Math.cos(theta);
+    const ny   = y;
+    const nz   = r * Math.sin(theta);
+    pts.push(new THREE.Vector3(nx*R, ny*R, nz*R));
+    normals.push(new THREE.Vector3(nx, ny, nz));
+  }
+  return { pts, normals };
+}
+
+const { pts: camPts, normals: camNormals } = fibHemisphere(112, DOME_R);
+
+// ── BAR GEOMETRY AT EACH CAMERA NODE ─────────────────────
+const RMSE_SCALE  = 4.5;   // RMSE 0.28 → height 1.26
+const BAR_W       = 0.055;
+const BAR_D       = 0.055;
+const COL_GAP     = 0.095;  // gap between bars in a row
+const ROW_GAP     = 0.095;
+const COLS        = 4;
+const ROWS        = 2;      // 4×2 = 8 bars
+
+const barGeo = new THREE.BoxGeometry(BAR_W, 1, BAR_D); // Y scaled per bar
+
+// One material per encoder
+const barMats = {};
+ENCODERS.forEach(enc => {
+  barMats[enc] = new THREE.MeshStandardMaterial({
+    color:     ENC_COLORS[enc],
+    emissive:  ENC_COLORS[enc],
+    emissiveIntensity: 0.4,
+    metalness: 0.1,
+    roughness: 0.6,
+  });
+});
+
+// Node dot material
+const nodeMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.55});
+const nodeGeo = new THREE.SphereGeometry(0.055, 8, 8);
+
+// Store references for hover & color-mode switching
+const nodeGroups = [];  // [{group, camIdx, bars:[{mesh,enc,rmse}]}]
+
+camPts.forEach((pos, camIdx) => {
+  const normal = camNormals[camIdx];
+
+  // Build local frame: Y=outward normal, X/Z=tangent
+  const worldUp = Math.abs(normal.y) > 0.95
+    ? new THREE.Vector3(1,0,0)
+    : new THREE.Vector3(0,1,0);
+  const localX = new THREE.Vector3().crossVectors(normal, worldUp).normalize();
+  const localZ = new THREE.Vector3().crossVectors(localX, normal).normalize();
+
+  const group = new THREE.Group();
+  group.position.copy(pos);
+  // Orient so group's +Y = outward
+  const mx = new THREE.Matrix4().makeBasis(localX, normal, localZ);
+  group.setRotationFromMatrix(mx);
+  scene.add(group);
+
+  // Node dot
+  const dot = new THREE.Mesh(nodeGeo, nodeMat);
+  group.add(dot);
+
+  const bars = [];
+  ENCODERS.forEach((enc, i) => {
+    const row = Math.floor(i / COLS);
+    const col = i % COLS;
+    const ox  = (col - (COLS-1)/2) * COL_GAP;
+    const oz  = (row - (ROWS-1)/2) * ROW_GAP;
+    const rmse   = getRMSE(enc, camIdx);
+    const height = Math.max(0.02, rmse * RMSE_SCALE);
+
+    const mesh = new THREE.Mesh(barGeo, barMats[enc]);
+    mesh.scale.y = height;
+    mesh.position.set(ox, height/2, oz);
+    group.add(mesh);
+    bars.push({ mesh, enc, rmse, ox, oz });
+  });
+
+  nodeGroups.push({ group, camIdx, bars, pos, normal });
+});
+
+// ── COLOR MODE SWITCH ─────────────────────────────────────
+function setColor(mode) {
+  colorMode = mode;
+  document.querySelectorAll('.mbtn').forEach((b,i) =>
+    b.classList.toggle('active', ['encoder','dataset'][i] === mode)
+  );
+  buildLegend(mode);
+  document.getElementById('axkey').innerHTML =
+    mode === 'encoder'
+      ? `<span style="color:#F72585">▲</span> BAR HEIGHT = RMSE<br><span style="color:#4CC9F0">●</span> NODE = CAMERA POSITION<br><span style="color:#06D6A0">■</span> COLOR = ENCODER`
+      : `<span style="color:#F72585">▲</span> BAR HEIGHT = RMSE<br><span style="color:#4CC9F0">●</span> NODE = CAMERA POSITION<br><span style="color:#FFB703">■</span> COLOR = DATASET`;
+  // Update bar colors — by dataset we color all bars at a node the same
+  // dataset color if we had per-dataset RMSE. For now keep encoder colors.
+  // (Extend here when real per-dataset data is available)
+}
+window.setColor = setColor;
+
+// ── RAYCASTER FOR HOVER ───────────────────────────────────
+const raycaster = new THREE.Raycaster();
+const mouse     = new THREE.Vector2(-999, -999);
+const tip       = document.getElementById('tooltip');
+let   hovered   = null;
+
+// Collect all bar meshes for raycasting
+const allBarMeshes = [];
+nodeGroups.forEach(ng => ng.bars.forEach(b => {
+  b.mesh.userData = { camIdx: ng.camIdx, enc: b.enc, rmse: b.rmse };
+  allBarMeshes.push(b.mesh);
+}));
+
+window.addEventListener('mousemove', e => {
+  mouse.x =  (e.clientX / innerWidth)  * 2 - 1;
+  mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  tip.style.left = (e.clientX + 14) + 'px';
+  tip.style.top  = (e.clientY - 14) + 'px';
+});
+
+function updateHover() {
+  raycaster.setFromCamera(mouse, cam);
+  const hits = raycaster.intersectObjects(allBarMeshes);
+  if (hits.length) {
+    const ud  = hits[0].object.userData;
+    const ng  = nodeGroups[ud.camIdx];
+    const best= ng.bars.reduce((a,b)=> a.rmse < b.rmse ? a : b);
+    tip.style.display = 'block';
+    tip.innerHTML = `<b>CAMERA ${ud.camIdx}</b><br>` +
+      ng.bars.map(b =>
+        `<div class="trow">
+          <span class="tenc" style="color:${ENC_CSS[b.enc]}">${b.enc}</span>
+          <span class="tval">${b.rmse.toFixed(4)}</span>
+        </div>`
+      ).join('') +
+      `<div style="margin-top:6px;color:#4CC9F0;font-size:13px;letter-spacing:2px">
+        BEST: ${best.enc} (${best.rmse.toFixed(4)})</div>`;
+    hovered = ud.camIdx;
+  } else {
+    tip.style.display = 'none';
+    hovered = null;
+  }
+}
+
+// ── ANIMATE ───────────────────────────────────────────────
+let t = 0;
+const CENTER = new THREE.Vector3(0, 3, 0);
+
+let rafId;
+function animate() {
+  rafId = requestAnimationFrame(animate);
+  t += 0.003;
+
+  // Orbit camera
+  cam.position.x = Math.sin(t * 0.7) * 22;
+  cam.position.z = Math.cos(t * 0.7) * 22;
+  cam.position.y = 8 + 5 * Math.sin(t * 0.25);
+  cam.lookAt(CENTER);
+
+  // Subtle dome rotation
+  domeGroup.rotation.y += 0.0006;
+
+  // Pulse end effector
+  eeMat.color.setHSL(0.55, 1, 0.5 + 0.15 * Math.sin(t * 4));
+
+  // Pulse node dots based on RMSE (best nodes brightest)
+  nodeGroups.forEach(ng => {
+    const avgRMSE = ng.bars.reduce((s,b)=>s+b.rmse,0)/ng.bars.length;
+    nodeMat.opacity = 0.3;  // shared mat — just leave constant
+  });
+
+  updateHover();
+  renderer.render(scene, cam);
+}
+animate();
+
+</script>
+
+<style id="export-styles">
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+  #export-panel {
+    position:fixed; bottom:28px; left:22px; z-index:9999;
+    pointer-events:all; display:flex; flex-direction:column; gap:5px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+  }
+  .epanel-label { font-size:13px; color:#1a3a52; letter-spacing:3px; margin-bottom:2px; text-transform:uppercase; }
+  .epanel-btn {
+
+    padding:10px 18px; font-size:10px; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    cursor:pointer; text-transform:uppercase; border:1px solid; transition:all .25s;
+    white-space:nowrap; display:flex; align-items:center; gap:8px;
+  }
+  .epanel-btn.et { background:rgba(76,201,240,.04); color:#4CC9F0; border-color:#4CC9F044; }
+  .epanel-btn.et:hover { background:rgba(76,201,240,.14); box-shadow:0 0 14px #4CC9F022; }
+  .epanel-btn.ew { background:rgba(255,255,255,.04); color:#8899aa; border-color:#44556644; }
+  .epanel-btn.ew:hover { background:rgba(255,255,255,.12); box-shadow:0 0 14px #ffffff11; }
+  .epanel-btn.ep { background:rgba(247,37,133,.04); color:#F72585; border-color:#F7258544; }
+  .epanel-btn.ep:hover { background:rgba(247,37,133,.14); box-shadow:0 0 14px #F7258522; }
+  .epanel-btn.ec { background:rgba(6,214,160,.04); color:#06D6A0; border-color:#06D6A044; }
+  .epanel-btn.ec:hover { background:rgba(6,214,160,.14); box-shadow:0 0 14px #06D6A022; }
+
+  #crop-overlay-univ {
+    position:fixed; inset:0; z-index:10000; display:none; cursor:crosshair;
+  }
+  #crop-overlay-univ canvas { position:absolute; top:0; left:0; }
+  #crop-bar-univ {
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    z-index:10001; background:rgba(2,8,20,.96); border:1px solid #1a3a5c;
+    padding:14px 22px; font-size:10px; color:#aaa; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    pointer-events:all; display:none; gap:14px; align-items:center;
+  }
+  #crop-bar-univ button {
+    padding:10px 20px; font-size:13px; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    cursor:pointer; text-transform:uppercase; border:1px solid; transition:all .2s;
+  }
+  .ucrop-ok { background:rgba(6,214,160,.1); color:#06D6A0; border-color:#06D6A0; }
+  .ucrop-ok:hover { background:rgba(6,214,160,.25); }
+  .ucrop-cancel { background:rgba(247,37,133,.1); color:#F72585; border-color:#F72585; }
+  .ucrop-cancel:hover { background:rgba(247,37,133,.25); }
+  .ucrop-info { color:#4CC9F0; }
+</style>
+
+<div id="export-panel">
+  <div class="epanel-label">Export Options</div>
+  <button class="epanel-btn et" onclick="univExportPNG('transparent')">⬇ PNG Transparent</button>
+  <button class="epanel-btn ew" onclick="univExportPNG('white')">⬇ PNG White Background</button>
+  <button class="epanel-btn ep" onclick="univExportPDF()">⬇ PDF Document</button>
+  <button class="epanel-btn ec" onclick="univStartCrop()">✂ Crop &amp; Export</button>
+</div>
+<div id="crop-overlay-univ"><canvas id="crop-cvs-univ"></canvas></div>
+<div id="crop-bar-univ">
+  <span class="ucrop-info">Drag to select region</span>
+  <span id="crop-dims-univ"></span>
+  <button class="ucrop-ok" onclick="univApplyCrop('transparent')">Transparent</button>
+  <button class="ucrop-ok" onclick="univApplyCrop('white')">White BG</button>
+  <button class="ucrop-ok" onclick="univApplyCrop('pdf')">PDF</button>
+  <button class="ucrop-cancel" onclick="univCancelCrop()">Cancel</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ═══ UNIVERSAL EXPORT ENGINE (Three.js variant) ═══
+const _USCALE = 3;
+
+function _getThreeStuff() {
+  // Find renderer, scene, camera from global scope
+  const c = document.getElementById('c');
+  return { canvas: c };
+}
+
+function _renderHiRes(bgMode) {
+  // Access Three.js globals
+  if (typeof renderer === 'undefined' || typeof scene === 'undefined' || typeof cam === 'undefined') {
+    // Try alternate name 'camera'
+    if (typeof camera !== 'undefined') {
+      window._cam = camera;
+    }
+  } else {
+    window._cam = cam;
+  }
+  const _scene = scene, _camera = window._cam || cam, _renderer = renderer;
+
+  const w = innerWidth * _USCALE, h = innerHeight * _USCALE;
+  const offR = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true, alpha: bgMode === 'transparent' });
+  offR.setSize(w, h);
+
+  const origBg = _scene.background;
+  const origFog = _scene.fog;
+
+  // Hide stars if they exist
+  let hiddenObjs = [];
+  _scene.traverse(obj => {
+    if (obj.isPoints && obj.geometry.attributes.position && obj.geometry.attributes.position.count > 500) {
+      if (bgMode === 'white' || bgMode === 'transparent') {
+        if (obj.visible) { obj.visible = false; hiddenObjs.push(obj); }
+      }
+    }
+  });
+
+  if (bgMode === 'transparent') { _scene.background = null; _scene.fog = null; }
+  else if (bgMode === 'white') { _scene.background = new THREE.Color(0xffffff); _scene.fog = null; }
+
+  offR.render(_scene, _camera);
+  const url = offR.domElement.toDataURL('image/png');
+
+  _scene.background = origBg; _scene.fog = origFog;
+  hiddenObjs.forEach(o => o.visible = true);
+  offR.dispose();
+  return url;
+}
+
+function _dlURL(url, fn) { const a = document.createElement('a'); a.href = url; a.download = fn; a.click(); }
+
+function univExportPNG(mode) {
+  const url = _renderHiRes(mode === 'transparent' ? 'transparent' : 'white');
+  _dlURL(url, document.title.replace(/[^a-zA-Z0-9]/g,'_') + '_' + mode + '.png');
+}
+function univExportPDF() {
+  const url = _renderHiRes('white');
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: innerWidth > innerHeight ? 'landscape' : 'portrait', unit: 'px', format: [innerWidth, innerHeight] });
+  pdf.addImage(url, 'PNG', 0, 0, innerWidth, innerHeight);
+  pdf.save(document.title.replace(/[^a-zA-Z0-9]/g,'_') + '.pdf');
+}
+
+// ═══ CROP ═══
+let _cImg=null,_cRect=null,_cDrag=false,_cStart={x:0,y:0};
+const _cOv=document.getElementById('crop-overlay-univ'),_cCvs=document.getElementById('crop-cvs-univ'),_cCtx=_cCvs.getContext('2d'),_cBar=document.getElementById('crop-bar-univ');
+
+function univStartCrop(){
+  const _r = renderer;
+  _r.render(typeof cam!=='undefined'?scene:scene, typeof cam!=='undefined'?cam:camera);
+  _cImg = new Image(); _cImg.onload = () => {
+    _cCvs.width=innerWidth;_cCvs.height=innerHeight;
+    _cOv.style.display='block';_cBar.style.display='flex';_cRect=null;_drawC();
+  }; _cImg.src = _r.domElement.toDataURL('image/png');
+}
+function _drawC(){
+  _cCtx.clearRect(0,0,_cCvs.width,_cCvs.height);
+  _cCtx.drawImage(_cImg,0,0,_cCvs.width,_cCvs.height);
+  if(_cRect){const{x,y,w,h}=_cRect;
+    _cCtx.fillStyle='rgba(0,0,0,0.6)';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);
+    _cCtx.save();_cCtx.beginPath();_cCtx.rect(0,0,_cCvs.width,_cCvs.height);_cCtx.rect(x,y+h,w,-h);_cCtx.clip('evenodd');
+    _cCtx.fillStyle='rgba(0,0,0,0.6)';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);_cCtx.restore();
+    _cCtx.drawImage(_cImg,0,0,_cCvs.width,_cCvs.height);
+    _cCtx.save();_cCtx.beginPath();_cCtx.rect(0,0,_cCvs.width,_cCvs.height);_cCtx.rect(x,y+h,w,-h);_cCtx.clip('evenodd');
+    _cCtx.fillStyle='rgba(0,0,0,0.6)';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);_cCtx.restore();
+    _cCtx.strokeStyle='#06D6A0';_cCtx.lineWidth=2;_cCtx.setLineDash([6,4]);_cCtx.strokeRect(x,y,w,h);_cCtx.setLineDash([]);
+    document.getElementById('crop-dims-univ').textContent=Math.abs(Math.round(w*_USCALE))+'×'+Math.abs(Math.round(h*_USCALE))+'px';
+  }
+}
+_cCvs.addEventListener('mousedown',e=>{_cDrag=true;_cStart={x:e.clientX,y:e.clientY};_cRect=null});
+_cCvs.addEventListener('mousemove',e=>{if(!_cDrag)return;_cRect={x:Math.min(_cStart.x,e.clientX),y:Math.min(_cStart.y,e.clientY),w:Math.abs(e.clientX-_cStart.x),h:Math.abs(e.clientY-_cStart.y)};_drawC()});
+_cCvs.addEventListener('mouseup',()=>_cDrag=false);
+
+function univApplyCrop(mode){
+  if(!_cRect||_cRect.w<5)return;
+  const bg=mode==='pdf'?'white':mode;
+  const hiURL=_renderHiRes(bg);
+  const hi=new Image();hi.onload=()=>{
+    const{x,y,w,h}=_cRect;
+    const sx=x/_cCvs.width*hi.width,sy=y/_cCvs.height*hi.height;
+    const sw=w/_cCvs.width*hi.width,sh=h/_cCvs.height*hi.height;
+    const tc=document.createElement('canvas');tc.width=sw;tc.height=sh;
+    const tctx=tc.getContext('2d');
+    if(bg==='white'){tctx.fillStyle='#fff';tctx.fillRect(0,0,sw,sh)}
+    tctx.drawImage(hi,sx,sy,sw,sh,0,0,sw,sh);
+    if(mode==='pdf'){const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:sw>sh?'landscape':'portrait',unit:'px',format:[sw/_USCALE,sh/_USCALE]});pdf.addImage(tc.toDataURL('image/png'),'PNG',0,0,sw/_USCALE,sh/_USCALE);pdf.save('crop_export.pdf')}
+    else _dlURL(tc.toDataURL('image/png'),'crop_'+mode+'.png');
+    univCancelCrop();
+  };hi.src=hiURL;
+}
+function univCancelCrop(){_cOv.style.display='none';_cBar.style.display='none';_cRect=null}
+</script>
+
+</body>
+</html>

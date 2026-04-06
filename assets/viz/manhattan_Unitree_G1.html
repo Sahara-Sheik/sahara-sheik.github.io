@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Manhattan — Unitree G1 (Sim 7-DOF)</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  canvas{display:block}
+  #ui{position:fixed;top:20px;left:28px;z-index:20}
+  #ttl{color:#F72585;font-size:32px;font-weight:800;letter-spacing:2px;
+        text-shadow:0 0 30px #F72585aa;margin-bottom:6px}
+  #sub{color:#4CC9F0;font-size:16px;letter-spacing:4px;text-transform:uppercase;opacity:.7}
+  #back{position:fixed;top:20px;right:24px;z-index:30;cursor:pointer;
+         padding:6px 16px;font-size:16px;letter-spacing:2px;text-transform:uppercase;
+         border:1px solid #1a3a5c;background:transparent;color:#4CC9F0;
+         font-family:inherit;transition:all .2s;text-decoration:none}
+  #back:hover{background:#4CC9F020;border-color:#4CC9F0;color:#fff}
+  #tip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);
+        border:1px solid #1a3a5c;padding:10px 14px;font-size:17px;color:#aaa;
+        min-width:160px;box-shadow:0 0 20px #4CC9F015;z-index:40;line-height:1.7}
+  #tip b{color:#F72585}
+  #tip em{color:#4CC9F0}
+  #tip strong{color:#7BF1A8;font-size:22px}
+</style>
+</head>
+<body>
+<a id="back" href="index.html">← Back</a>
+<div id="ui"><div id="ttl">Manhattan — Unitree G1 (Sim 7-DOF)</div><div id="sub">3-D RMSE · Hover for values · Drag to orbit</div></div>
+<div id="tip"></div>
+<canvas id="cv"></canvas>
+<script>
+
+const ROBOTS_LABEL = "Unitree G1 (Sim 7-DOF)";
+const MODELS   = ["ptun-convvae-128", "ptun-convvae-256", "ptun-vgg19-128", "ptun-vgg19-256", "ptun-resnet50-128", "ptun-resnet50-256", "ptun-vit-base-128", "ptun-vit-base-256"];
+const JOINTS   = ["left_shoulder_pitch_joint", "left_shoulder_roll_joint", "left_shoulder_yaw_joint", "left_elbow_joint", "left_wrist_pitch_joint", "left_wrist_roll_joint", "left_wrist_yaw_joint"];
+const COLORS   = {"ptun-convvae-128": "#ff6eb4", "ptun-convvae-256": "#F72585", "ptun-vgg19-128": "#ffe57a", "ptun-vgg19-256": "#FFD60A", "ptun-resnet50-128": "#b2f5d4", "ptun-resnet50-256": "#7BF1A8", "ptun-vit-base-128": "#9ee7ff", "ptun-vit-base-256": "#4CC9F0"};
+const MSE      = [[0.0516, 0.0896, 0.0883, 0.063, 0.0004, 0.0005, 0.0001], [0.0302, 0.0739, 0.0802, 0.0411, 0.0043, 0.0045, 0.0006], [0.0139, 0.0259, 0.0239, 0.0164, 0.0095, 0.0072, 0.0054], [0.0191, 0.0218, 0.0237, 0.0134, 0.0091, 0.0084, 0.0045], [0.0791, 0.0961, 0.0957, 0.0801, 0.0061, 0.0064, 0.0009], [0.0613, 0.0927, 0.0987, 0.0677, 0.0034, 0.0063, 0.0007], [0.0287, 0.0508, 0.0586, 0.0358, 0.0043, 0.0034, 0.0008], [0.0239, 0.0376, 0.0693, 0.0323, 0.0048, 0.0038, 0.002]];
+const BEST     = [2, 3, 3, 3, 0, 0, 0];
+const NONMV    = [4, 5, 6];
+
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let W, H;
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+resize(); window.addEventListener('resize',resize);
+
+// Camera angles
+const cam = {x:0.52, y:-0.55};
+let drag=false,lx,ly,auto=true;
+
+// KEY FIX: all 3D coords are multiplied by SC so they're large enough to project visibly
+const SC = 55;  // world-space scale — bars will now be tens of pixels wide
+
+function proj(x3,y3,z3){
+  const cy=Math.cos(cam.y),sy=Math.sin(cam.y);
+  const rx=x3*cy-z3*sy, rz=x3*sy+z3*cy;
+  const cx2=Math.cos(cam.x),sx2=Math.sin(cam.x);
+  const ry=y3*cx2-rz*sx2, fz=y3*sx2+rz*cx2;
+  const fov=700, dz=fov+fz+400;
+  return{sx:W/2+rx*fov/dz, sy:H/2-ry*fov/dz, z:fz};
+}
+
+cv.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;auto=false;});
+window.addEventListener('mouseup',()=>drag=false);
+cv.addEventListener('mousemove',e=>{
+  if(drag){
+    cam.y+=(e.clientX-lx)*.006;
+    cam.x+=(e.clientY-ly)*.004;
+    cam.x=Math.max(-0.05,Math.min(1.1,cam.x));
+    lx=e.clientX;ly=e.clientY;
+  }
+  window._mx=e.clientX;window._my=e.clientY;
+});
+cv.addEventListener('mouseleave',()=>{window._mx=undefined;});
+
+const tip=document.getElementById('tip');
+function hexRGB(h){const v=parseInt(h.replace('#',''),16);return[(v>>16)&255,(v>>8)&255,v&255];}
+
+// Find global max RMSE for y-axis normalization
+const ALL_VALS = MSE.flat().filter(v=>v!==null&&v!==undefined);
+const MAX_RMSE = Math.max(...ALL_VALS) || 0.5;
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020810';ctx.fillRect(0,0,W,H);
+
+  const nE=MODELS.length, nJ=JOINTS.length;
+  // Spacing between bars/groups — multiplied by SC later
+  const sE=1.5, sJ=1.8;
+  const BW=0.80, BD=0.80;       // bar footprint (fraction of spacing)
+  const MAX_H=2.2;               // max bar height in world units (×SC pixels)
+  const cxG=nE*sE/2, czG=nJ*sJ/2;
+
+  // Helper: world coord → screen
+  function p3(x,y,z){return proj(x*SC, y*SC, z*SC);}
+
+  // Floor grid
+  ctx.strokeStyle='rgba(76,201,240,0.10)';ctx.lineWidth=0.8;
+  for(let e=0;e<=nE;e++){
+    const p0=p3(e*sE-cxG,0,-czG), p1=p3(e*sE-cxG,0,nJ*sJ-czG);
+    ctx.beginPath();ctx.moveTo(p0.sx,p0.sy);ctx.lineTo(p1.sx,p1.sy);ctx.stroke();
+  }
+  for(let j=0;j<=nJ;j++){
+    const p0=p3(-cxG,0,j*sJ-czG), p1=p3(nE*sE-cxG,0,j*sJ-czG);
+    ctx.beginPath();ctx.moveTo(p0.sx,p0.sy);ctx.lineTo(p1.sx,p1.sy);ctx.stroke();
+  }
+  // Y-axis line
+  ctx.strokeStyle='rgba(247,37,133,0.25)';ctx.lineWidth=1;
+  const yorg=p3(-cxG,0,-czG), ytop=p3(-cxG,MAX_H,-czG);
+  ctx.beginPath();ctx.moveTo(yorg.sx,yorg.sy);ctx.lineTo(ytop.sx,ytop.sy);ctx.stroke();
+
+  // Sort bars back-to-front for correct painter's order
+  const bars=[];
+  for(let e=0;e<nE;e++) for(let j=0;j<nJ;j++){
+    if(MSE[e][j]==null) continue;
+    const cx=e*sE+sE/2-cxG, cz=j*sJ+sJ/2-czG;
+    const h=(MSE[e][j]/MAX_RMSE)*MAX_H;
+    const mid=p3(cx,h/2,cz);
+    bars.push({e,j,cx,cz,h,depth:mid.z});
+  }
+  bars.sort((a,b)=>b.depth-a.depth);
+
+  let hov=null;
+  const mx=window._mx, my=window._my;
+
+  for(const{e,j,cx,cz,h} of bars){
+    const col=COLORS[MODELS[e]];
+    const [r,g,b]=hexRGB(col);
+    const best=BEST[j]===e;
+    const nm=NONMV.includes(j);
+    const alpha=nm?0.45:0.94;
+    const hw=BW/2, hd=BD/2;
+
+    // 8 corners of the box
+    const TFL=p3(cx-hw,h,cz-hd), TFR=p3(cx+hw,h,cz-hd);
+    const TBL=p3(cx-hw,h,cz+hd), TBR=p3(cx+hw,h,cz+hd);
+    const BFL=p3(cx-hw,0,cz-hd), BFR=p3(cx+hw,0,cz-hd);
+    const BBL=p3(cx-hw,0,cz+hd), BBR=p3(cx+hw,0,cz+hd);
+
+    // Draw 4 visible faces (right / left / top / front) with different brightness
+    const faces=[
+      {pts:[TFR,TBR,BBR,BFR], lf:0.52},  // right
+      {pts:[TFL,TBL,BBL,BFL], lf:0.38},  // left
+      {pts:[TFL,TFR,TBR,TBL], lf:1.0, top:true},  // top
+      {pts:[TFL,TFR,BFR,BFL], lf:0.68},  // front
+    ];
+
+    for(const{pts,lf,top}of faces){
+      ctx.beginPath();
+      pts.forEach((p,i)=>i?ctx.lineTo(p.sx,p.sy):ctx.moveTo(p.sx,p.sy));
+      ctx.closePath();
+      ctx.fillStyle=`rgba(${Math.round(r*lf)},${Math.round(g*lf)},${Math.round(b*lf)},${alpha})`;
+      ctx.fill();
+      if(best && top){
+        ctx.shadowColor=col; ctx.shadowBlur=18;
+        ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.stroke();
+        ctx.shadowBlur=0;
+      } else if(best){
+        ctx.strokeStyle=col+'88'; ctx.lineWidth=0.8; ctx.stroke();
+      }
+    }
+
+    // Hit-test on top face
+    if(mx!==undefined){
+      const pts=[[TFL.sx,TFL.sy],[TFR.sx,TFR.sy],[TBR.sx,TBR.sy],[TBL.sx,TBL.sy]];
+      let inside=false;
+      for(let i=0,k=pts.length-1;i<pts.length;k=i++){
+        const[xi,yi]=pts[i],[xk,yk]=pts[k];
+        if(((yi>my)!=(yk>my))&&(mx<(xk-xi)*(my-yi)/(yk-yi)+xi)) inside=!inside;
+      }
+      if(inside) hov={e,j};
+    }
+  }
+
+  // ── Labels ──────────────────────────────────────────────────
+
+  // Encoder names along front axis (angled)
+  for(let e=0;e<nE;e++){
+    const cx=e*sE+sE/2-cxG;
+    const p=p3(cx,-0.15,-czG-0.9);
+    ctx.save();
+    ctx.translate(p.sx,p.sy);
+    ctx.rotate(-0.42);
+    ctx.fillStyle=COLORS[MODELS[e]];
+    ctx.globalAlpha=0.85;
+    ctx.font='bold 16px JetBrains Mono';
+    ctx.fillText(MODELS[e].replace('ptun-',''),-38,0);
+    ctx.restore();
+    ctx.globalAlpha=1;
+  }
+
+  // Joint names along side axis
+  ctx.font='18px JetBrains Mono';
+  for(let j=0;j<nJ;j++){
+    const cz=j*sJ+sJ/2-czG;
+    const p=p3(-cxG-0.7,0,cz);
+    ctx.globalAlpha=NONMV.includes(j)?0.3:0.8;
+    ctx.fillStyle='#4CC9F0';
+    const lbl=JOINTS[j].replace('left_','').replace('panda_','').replace('_joint','').replace('joint','j');
+    ctx.fillText(lbl,p.sx-lbl.length*5.5,p.sy+4);
+  }
+  ctx.globalAlpha=1;
+
+  // Y-axis RMSE ticks
+  const nTicks=5;
+  for(let t=0;t<=nTicks;t++){
+    const v=(t/nTicks)*MAX_RMSE;
+    const yh=(v/MAX_RMSE)*MAX_H;
+    const p=p3(-cxG-0.4,yh,-czG);
+    ctx.fillStyle='rgba(76,201,240,0.45)';
+    ctx.font='15px JetBrains Mono';
+    ctx.fillText(v.toFixed(2),p.sx-22,p.sy+3);
+    // tick mark on y-axis
+    const pt=p3(-cxG,yh,-czG);
+    ctx.beginPath();ctx.moveTo(pt.sx-4,pt.sy);ctx.lineTo(pt.sx+4,pt.sy);
+    ctx.strokeStyle='rgba(247,37,133,0.4)';ctx.lineWidth=1;ctx.stroke();
+  }
+
+  // RMSE axis label
+  const ylab=p3(-cxG-0.5,MAX_H*0.6,-czG);
+  ctx.save();ctx.translate(ylab.sx,ylab.sy);ctx.rotate(-0.5);
+  ctx.fillStyle='#F72585';ctx.font='bold 16px JetBrains Mono';
+  ctx.fillText('RMSE ↑',0,0);
+  ctx.restore();
+
+  // Bottom legend (colour swatches)
+  const legY=H-20, legStep=(W-60)/(nE);
+  MODELS.forEach((m,i)=>{
+    const lx2=30+i*legStep;
+    ctx.fillStyle=COLORS[m];
+    ctx.fillRect(lx2,legY-9,14,9);
+    ctx.fillStyle='#aaa';
+    ctx.font='15px JetBrains Mono';
+    ctx.fillText(m.replace('ptun-',''),lx2+17,legY);
+  });
+
+  // Tooltip
+  if(hov){
+    const{e,j}=hov;
+    tip.style.display='block';
+    tip.style.left=(mx+14)+'px'; tip.style.top=(my-8)+'px';
+    const nm=NONMV.includes(j)?'<span style="color:#666"> [non-moving]</span>':'';
+    const best=BEST[j]===e?'<br><span style="color:#FFD60A">★ BEST for this joint</span>':'';
+    tip.innerHTML=`<b>${MODELS[e]}</b><br><em>${JOINTS[j]}${nm}</em><br><strong>${MSE[e][j]!=null?MSE[e][j].toFixed(4):'N/A'}</strong> RMSE${best}`;
+  } else {tip.style.display='none';}
+
+  if(auto){
+    cam.y += 0.006;  // continuous yaw — full 360° orbit
+    // gentle pitch oscillation so the viewer sees bars from slightly above, never flat
+    cam.x = 0.38 + 0.18 * Math.sin(cam.y * 0.4);
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+</script>
+</body></html>

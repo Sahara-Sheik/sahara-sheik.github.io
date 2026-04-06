@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>RMSE Heatgrid · 5,376 Models</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono','Courier New',monospace;color:#ccc}
+  #header{position:fixed;top:20px;left:50%;transform:translateX(-50%);text-align:center;z-index:20}
+  #sup{color:#1a3a5c;font-size:11px;letter-spacing:5px;text-transform:uppercase}
+  #counter{color:#F72585;font-size:56px;font-weight:700;line-height:1.1;text-shadow:0 0 50px #F72585bb;font-variant-numeric:tabular-nums}
+  #sub{color:#4CC9F0;font-size:12px;letter-spacing:4px;margin-top:4px;text-shadow:0 0 10px #4CC9F033}
+  #container{position:absolute;top:100px;left:0;right:0;bottom:0;display:flex;justify-content:center;align-items:center}
+  canvas#heatmap{cursor:crosshair}
+  #tooltip{position:fixed;display:none;pointer-events:none;background:rgba(2,8,20,.96);border:1px solid #1a3a5c;padding:14px 18px;font-size:13px;color:#aaa;min-width:240px;box-shadow:0 0 30px #4CC9F015;z-index:30}
+  #tooltip b{color:#4CC9F0;letter-spacing:2px;font-size:11px}
+  #tooltip .trow{display:flex;justify-content:space-between;gap:20px;margin-top:5px}
+  #tooltip .tval{font-weight:bold;color:#F72585}
+  #tooltip .bar{height:4px;margin-top:8px;background:linear-gradient(90deg,#4CC9F0,#06D6A0,#FFB703,#F72585);border-radius:2px;position:relative}
+  #tooltip .marker{position:absolute;top:-3px;width:2px;height:10px;background:#fff}
+  #controls{position:fixed;top:20px;right:24px;z-index:20;display:flex;gap:6px}
+  .cbtn{padding:8px 14px;font-size:11px;letter-spacing:2px;font-family:inherit;cursor:pointer;text-transform:uppercase;background:rgba(255,255,255,.015);color:#2a5a7a;border:1px solid #0d2a44;transition:all .25s}
+  .cbtn:hover{border-color:#4CC9F0;color:#4CC9F0}
+  .cbtn.active{background:rgba(247,37,133,.08);color:#F72585;border-color:#F72585}
+  #colorbar{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:20}
+  #colorbar canvas{border:1px solid #0d2a44}
+  .cblabel{color:#2a5a7a;font-size:11px;letter-spacing:2px}
+  #stats{position:fixed;top:20px;left:24px;z-index:20;color:#1a3a52;font-size:11px;letter-spacing:2px;line-height:2.2;text-transform:uppercase}
+
+  /* Export */
+  #export-panel{position:fixed;bottom:16px;left:24px;z-index:20;display:flex;flex-direction:column;gap:5px}
+  .ebtn{padding:8px 16px;font-size:11px;letter-spacing:2px;font-family:inherit;cursor:pointer;text-transform:uppercase;border:1px solid #0d2a44;transition:all .25s;white-space:nowrap}
+  .ebtn.t{background:rgba(76,201,240,.04);color:#4CC9F0;border-color:#4CC9F044}.ebtn.t:hover{background:rgba(76,201,240,.12)}
+  .ebtn.w{background:rgba(255,255,255,.04);color:#8899aa;border-color:#33445544}.ebtn.w:hover{background:rgba(255,255,255,.1)}
+  .ebtn.p{background:rgba(247,37,133,.04);color:#F72585;border-color:#F7258544}.ebtn.p:hover{background:rgba(247,37,133,.12)}
+  .ebtn.cr{background:rgba(6,214,160,.04);color:#06D6A0;border-color:#06D6A044}.ebtn.cr:hover{background:rgba(6,214,160,.12)}
+  .elabel{font-size:10px;color:#1a3a52;letter-spacing:3px;margin-bottom:2px;text-transform:uppercase}
+
+  /* Crop */
+  #crop-overlay{position:fixed;inset:0;z-index:100;display:none;cursor:crosshair;background:rgba(0,0,0,.5)}
+  #crop-canvas{position:absolute;top:0;left:0}
+  #crop-bar{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:101;background:rgba(2,8,20,.95);border:1px solid #1a3a5c;padding:12px 20px;font-size:12px;color:#aaa;letter-spacing:2px;pointer-events:all;display:none;gap:14px;align-items:center}
+  #crop-bar button{padding:6px 16px;font-size:11px;letter-spacing:2px;font-family:inherit;cursor:pointer;text-transform:uppercase;border:1px solid;transition:all .2s}
+  .crop-ok{background:rgba(6,214,160,.1);color:#06D6A0;border-color:#06D6A0}
+  .crop-cancel{background:rgba(247,37,133,.1);color:#F72585;border-color:#F72585}
+  .crop-info{color:#4CC9F0}
+</style>
+</head>
+<body>
+<div id="header">
+  <div id="sup">Domain Randomization · Visual Proprioception · Performance Heatgrid</div>
+  <div id="counter">5,376</div>
+  <div id="sub">RMSE INTENSITY MAP &nbsp;·&nbsp; ENCODER × CAMERA POSITION</div>
+</div>
+<div id="stats">Neural Heatgrid<br>Rows = Encoders (9)<br>Cols = Cameras (112)<br>Cell = Mean RMSE<br><span id="range-display"></span></div>
+<div id="controls">
+  <button class="cbtn active" onclick="setCS('plasma')">Plasma</button>
+  <button class="cbtn" onclick="setCS('viridis')">Viridis</button>
+  <button class="cbtn" onclick="setCS('hot')">Thermal</button>
+  <button class="cbtn" onclick="setCS('cyber')">Cyber</button>
+</div>
+<div id="container"><canvas id="heatmap"></canvas></div>
+<div id="colorbar">
+  <span class="cblabel">LOW RMSE</span>
+  <canvas id="cbar" width="300" height="14"></canvas>
+  <span class="cblabel">HIGH RMSE</span>
+</div>
+<div id="tooltip"></div>
+<button class="ebtn t" onclick="exportPNG('transparent')">⬇ PNG Transparent</button>
+  <button class="ebtn w" onclick="exportPNG('white')">⬇ PNG White BG</button>
+  <button class="ebtn p" onclick="exportPDF()">⬇ PDF</button>
+  <button class="ebtn cr" onclick="startCrop()">✂ Crop &amp; Export</button>
+</div>
+<div id="crop-overlay"><canvas id="crop-canvas"></canvas></div>
+<div id="crop-bar">
+  <span class="crop-info">Drag to select</span>
+  <span id="crop-dims"></span>
+  <button class="crop-ok" onclick="applyCrop('transparent')">Transparent</button>
+  <button class="crop-ok" onclick="applyCrop('white')">White BG</button>
+  <button class="crop-ok" onclick="applyCrop('pdf')">PDF</button>
+  <button class="crop-cancel" onclick="cancelCrop()">Cancel</button>
+</div>
+
+<script>
+const MODEL_DATA = {"ConvVAE-128":[0.26212,0.26122,0.25409,0.26116,0.26387,0.2627,0.25893,0.25779,0.26089,0.25718,0.25947,0.26164,0.25615,0.26168,0.26279,0.25541,0.25966,0.27032,0.25474,0.24539,0.24103,0.24899,0.24948,0.27091,0.25569,0.26647,0.25839,0.26163,0.25517,0.26138,0.24832,0.24759,0.24323,0.253,0.26828,0.2566,0.26283,0.26358,0.26121,0.26591,0.26887,0.26559,0.25254,0.24477,0.24735,0.25178,0.2609,0.26164,0.25049,0.25314,0.26788,0.26356,0.25492,0.25689,0.24222,0.24551,0.24715,0.25837,0.25706,0.25592,0.25241,0.25482,0.25824,0.25515,0.25505,0.25953,0.25152,0.2519,0.24866,0.25533,0.2584,0.25498,0.25347,0.25241,0.251,0.25167,0.2555,0.24935,0.25035,0.25532,0.25611,0.25494,0.25286,0.25843,0.25456,0.24817,0.25409,0.2515,0.25493,0.2538,0.25359,0.26042,0.25366,0.25102,0.25135,0.25096,0.24878,0.24849,0.25392,0.24967,0.25111,0.25185,0.24984,0.2535,0.25715,0.24794,0.25593,0.2503,0.25343,0.25327,0.25277,0.25207],"ConvVAE-256":[0.25964,0.26161,0.26612,0.26081,0.26386,0.26339,0.25828,0.25493,0.25248,0.25776,0.2578,0.25093,0.25939,0.26506,0.25958,0.25514,0.25844,0.26606,0.25233,0.24667,0.2404,0.24815,0.25395,0.25984,0.27181,0.26249,0.26627,0.25759,0.25909,0.25941,0.24826,0.25124,0.24873,0.24785,0.25831,0.26004,0.2566,0.27673,0.27303,0.26661,0.26658,0.25358,0.24554,0.24624,0.24919,0.25022,0.2628,0.26803,0.2586,0.26217,0.25811,0.26293,0.25993,0.26526,0.24805,0.25105,0.25472,0.25151,0.26051,0.25112,0.25332,0.25017,0.25515,0.25227,0.25573,0.25574,0.25418,0.24691,0.25553,0.25436,0.25495,0.25801,0.25503,0.25567,0.25341,0.24922,0.25286,0.25451,0.25422,0.25654,0.25464,0.254,0.25479,0.25616,0.25257,0.25308,0.2499,0.25039,0.25534,0.25724,0.25396,0.25429,0.25495,0.25629,0.25549,0.25717,0.25262,0.25294,0.25404,0.25326,0.25187,0.25226,0.25625,0.25252,0.25586,0.25355,0.2545,0.25673,0.24881,0.25281,0.25347,0.24942],"ResNet50-128":[0.25846,0.26168,0.25827,0.25219,0.2583,0.25989,0.25756,0.26429,0.26457,0.26609,0.26629,0.2682,0.27344,0.27607,0.27011,0.26766,0.27254,0.26884,0.26975,0.26373,0.26465,0.26193,0.27025,0.27295,0.27271,0.27074,0.2747,0.26914,0.26508,0.26507,0.26647,0.2606,0.26372,0.27261,0.2714,0.2676,0.27283,0.26977,0.2725,0.27151,0.26771,0.27013,0.26782,0.26976,0.26153,0.26936,0.26808,0.27072,0.2652,0.26483,0.2677,0.26633,0.26465,0.2683,0.2667,0.26371,0.24665,0.2552,0.26044,0.25626,0.25087,0.26228,0.25974,0.26392,0.26548,0.26633,0.26138,0.2627,0.26018,0.26835,0.2657,0.26791,0.26748,0.26655,0.26242,0.26659,0.26626,0.26222,0.26631,0.26679,0.26268,0.26623,0.26933,0.26624,0.26341,0.2659,0.26242,0.26381,0.26839,0.26657,0.27102,0.26724,0.268,0.27056,0.27398,0.2663,0.2663,0.25969,0.26389,0.2635,0.26617,0.26839,0.26947,0.26702,0.26795,0.2705,0.26117,0.26756,0.26548,0.26461,0.26311,0.26551],"ResNet50-256":[0.2616,0.25919,0.25692,0.25143,0.25681,0.26163,0.26182,0.26476,0.26625,0.26252,0.26612,0.2675,0.27073,0.27099,0.26719,0.27067,0.27113,0.27352,0.27544,0.2615,0.26194,0.26199,0.26409,0.27089,0.26882,0.26816,0.2706,0.27212,0.2684,0.26515,0.26807,0.26182,0.26334,0.26818,0.27045,0.26711,0.27063,0.2683,0.26971,0.26761,0.265,0.27017,0.26185,0.26696,0.25922,0.26774,0.27169,0.26884,0.26291,0.26644,0.26818,0.26739,0.26328,0.26418,0.26237,0.26267,0.24938,0.25258,0.25695,0.25664,0.25053,0.2689,0.26529,0.26548,0.26804,0.26482,0.26217,0.26556,0.26209,0.27118,0.27054,0.26781,0.26687,0.26401,0.26785,0.26503,0.26937,0.26431,0.26309,0.26216,0.26846,0.26564,0.27115,0.26594,0.26855,0.26443,0.2609,0.26718,0.26871,0.26918,0.27014,0.26777,0.26765,0.26739,0.27258,0.26488,0.26367,0.26533,0.26754,0.26689,0.26951,0.26999,0.26704,0.26365,0.26726,0.27072,0.27045,0.26376,0.26753,0.26714,0.26349,0.26937],"VGG19-128":[0.19379,0.19798,0.19668,0.2034,0.21109,0.21488,0.21947,0.20347,0.20469,0.20165,0.19619,0.19247,0.20256,0.20848,0.19865,0.20159,0.20136,0.20582,0.2005,0.19551,0.19772,0.19438,0.19568,0.19901,0.18983,0.19677,0.20072,0.19641,0.19999,0.19243,0.19991,0.19753,0.2014,0.18962,0.19127,0.20227,0.19433,0.20417,0.19946,0.19549,0.2013,0.1967,0.19749,0.19886,0.20196,0.19294,0.19164,0.19068,0.19873,0.19882,0.19862,0.19291,0.1904,0.19342,0.19433,0.19603,0.20097,0.19584,0.19079,0.19315,0.19968,0.20125,0.19943,0.19737,0.19682,0.19208,0.19275,0.19493,0.19612,0.19625,0.18871,0.19021,0.19713,0.19566,0.19818,0.2057,0.19366,0.19509,0.19389,0.19577,0.19273,0.19659,0.19231,0.1903,0.19844,0.19511,0.20218,0.19798,0.1929,0.19545,0.19421,0.18839,0.19542,0.1946,0.19557,0.19334,0.19378,0.19755,0.19806,0.1965,0.19486,0.19037,0.19146,0.19691,0.19399,0.19846,0.19794,0.18941,0.1917,0.19787,0.20018,0.19914],"VGG19-256":[0.19764,0.19876,0.19269,0.19997,0.2051,0.21275,0.21225,0.20587,0.20386,0.19986,0.1989,0.19229,0.19715,0.19925,0.20448,0.19585,0.20863,0.20182,0.19846,0.20055,0.19976,0.19608,0.19965,0.19582,0.19025,0.1969,0.20235,0.19863,0.19977,0.1924,0.19334,0.19862,0.1954,0.19368,0.18871,0.19515,0.20248,0.20143,0.19862,0.19117,0.19774,0.19584,0.19723,0.19843,0.20316,0.1981,0.1972,0.19675,0.1953,0.19967,0.1966,0.1908,0.18992,0.19048,0.19192,0.19563,0.19832,0.19738,0.19668,0.19166,0.19158,0.19606,0.20037,0.19245,0.196,0.19603,0.19413,0.19113,0.1954,0.19269,0.19356,0.18732,0.19473,0.20217,0.20054,0.19976,0.19096,0.19322,0.19109,0.19285,0.19368,0.19659,0.18573,0.1916,0.1971,0.19916,0.2016,0.19697,0.1909,0.19115,0.19233,0.18792,0.19184,0.19356,0.19071,0.19509,0.18777,0.1915,0.19634,0.19803,0.19334,0.19121,0.19145,0.19581,0.19309,0.20062,0.19789,0.18967,0.18846,0.19553,0.19866,0.19821],"ViT-128":[0.20226,0.20611,0.2077,0.20554,0.20951,0.22407,0.22094,0.21199,0.21261,0.20557,0.2162,0.21157,0.19484,0.19246,0.18749,0.1944,0.2067,0.21415,0.2061,0.20084,0.19258,0.19749,0.19685,0.1911,0.20034,0.20286,0.19115,0.18831,0.19165,0.20129,0.20048,0.19986,0.18973,0.19556,0.19256,0.20337,0.19603,0.20674,0.1961,0.20326,0.19607,0.19807,0.19199,0.19938,0.20407,0.20541,0.19436,0.20339,0.20769,0.20617,0.19376,0.19736,0.19765,0.19305,0.1806,0.18803,0.19731,0.20257,0.204,0.20455,0.19468,0.20001,0.19868,0.1932,0.19739,0.18709,0.18909,0.18805,0.20207,0.1955,0.20108,0.19801,0.2032,0.21608,0.2039,0.20533,0.21694,0.20701,0.19775,0.20045,0.19313,0.20933,0.20368,0.2179,0.21531,0.21501,0.20417,0.20335,0.20481,0.19225,0.19301,0.20043,0.20479,0.20484,0.22053,0.21622,0.20084,0.20168,0.20279,0.21207,0.20188,0.20023,0.20484,0.20748,0.20682,0.20367,0.20764,0.21935,0.21859,0.20753,0.20837,0.21745],"ViT-256":[0.21599,0.19855,0.20165,0.20378,0.20899,0.22549,0.2125,0.20902,0.20734,0.2079,0.20662,0.19906,0.19018,0.18007,0.18664,0.19086,0.20326,0.21336,0.20767,0.19945,0.19719,0.2003,0.19506,0.1898,0.19037,0.19744,0.18767,0.18469,0.19888,0.19875,0.19011,0.19726,0.19128,0.19005,0.18758,0.18811,0.19545,0.19762,0.19151,0.19591,0.19131,0.21021,0.19409,0.19403,0.20009,0.19191,0.19628,0.19951,0.19973,0.20348,0.19829,0.19399,0.19522,0.19329,0.18772,0.18393,0.19516,0.20036,0.19496,0.19965,0.19585,0.19949,0.20078,0.19393,0.2012,0.18192,0.19042,0.1884,0.19357,0.19851,0.19633,0.19757,0.2023,0.20633,0.20384,0.21333,0.20594,0.19204,0.1942,0.19654,0.1988,0.202,0.20399,0.21759,0.21078,0.20664,0.21226,0.20934,0.20305,0.19609,0.19692,0.19817,0.20027,0.20984,0.2114,0.20913,0.21299,0.21252,0.20321,0.20353,0.20857,0.20276,0.2067,0.20335,0.20374,0.20924,0.2116,0.20828,0.22186,0.21275,0.20834,0.20537],"ViT_128":[0.24269,0.18721,0.18334,0.19265,0.18829,0.18168,0.18886,0.17469,0.1782,0.19563,0.19965,0.18152,0.18618,0.18547,0.19361,0.20114,0.19419,0.19113,0.19188,0.17975,0.17897,0.17783,0.18869,0.18075,0.19619,0.19351,0.17566,0.19791,0.18869,0.18834,0.19689,0.18769,0.18714,0.18141,0.19197,0.1812,0.19365,0.18813,0.18543,0.17962,0.1891,0.18233,0.20512,0.18464,0.19869,0.17837,0.18605,0.18239,0.1972,0.19491,0.18433,0.18445,0.18661,0.178,0.19192,0.16802,0.17994,0.17715,0.18422,0.1859,0.20028,0.18796,0.18323,0.18631,0.18913,0.18554,0.17413,0.17111,0.18237,0.1897,0.19634,0.18711,0.18161,0.17144,0.18506,0.19124,0.18587,0.18876,0.18234,0.17943,0.17725,0.18724,0.18261,0.1817,0.18436,0.19363,0.19305,0.19925,0.19544,0.19353,0.20321,0.18075,0.17778,0.19331,0.18612,0.19158,0.19587,0.19454,0.19291,0.1939,0.1963,0.19601,0.19303,0.18876,0.19467,0.19558,0.19408,0.19311,0.20403,0.20573,0.2067,0.20313]};
+
+const ENCODERS=Object.keys(MODEL_DATA),N_CAM=112,N_ENC=ENCODERS.length;
+let gMin=Infinity,gMax=-Infinity;
+ENCODERS.forEach(enc=>{MODEL_DATA[enc].forEach(v=>{gMin=Math.min(gMin,v);gMax=Math.max(gMax,v)})});
+document.getElementById('range-display').textContent=`Range: ${gMin.toFixed(4)}–${gMax.toFixed(4)}`;
+
+const SCHEMES={
+  plasma:[[0,[13,8,135]],[.15,[84,2,163]],[.3,[139,10,165]],[.45,[185,50,137]],[.6,[219,92,104]],[.75,[244,136,73]],[.9,[254,188,43]],[1,[240,249,33]]],
+  viridis:[[0,[68,1,84]],[.15,[72,35,116]],[.3,[64,67,135]],[.45,[52,95,141]],[.6,[33,145,140]],[.75,[53,183,121]],[.9,[144,215,67]],[1,[253,231,37]]],
+  hot:[[0,[10,5,30]],[.2,[60,10,80]],[.4,[150,20,60]],[.6,[220,70,20]],[.8,[255,160,30]],[1,[255,255,200]]],
+  cyber:[[0,[2,8,16]],[.2,[10,40,80]],[.4,[76,201,240]],[.5,[6,214,160]],[.7,[255,183,3]],[.85,[247,37,133]],[1,[255,255,255]]]
+};
+let currentScheme='plasma';
+
+function lerpC(scheme,t){const stops=SCHEMES[scheme];t=Math.max(0,Math.min(1,t));for(let i=0;i<stops.length-1;i++){if(t>=stops[i][0]&&t<=stops[i+1][0]){const f=(t-stops[i][0])/(stops[i+1][0]-stops[i][0]);return[Math.round(stops[i][1][0]+(stops[i+1][1][0]-stops[i][1][0])*f),Math.round(stops[i][1][1]+(stops[i+1][1][1]-stops[i][1][1])*f),Math.round(stops[i][1][2]+(stops[i+1][1][2]-stops[i][1][2])*f)]}}return stops[stops.length-1][1]}
+
+const canvas=document.getElementById('heatmap'),ctx=canvas.getContext('2d');
+const MARGIN={top:20,right:50,bottom:50,left:130},CELL_W=7,CELL_H=42,GAP=3;
+const SCALE=2; // retina
+
+function totalW(){return MARGIN.left+N_CAM*CELL_W+MARGIN.right}
+function totalH(){return MARGIN.top+N_ENC*(CELL_H+GAP)+MARGIN.bottom}
+
+function drawHeatmap(bgMode='dark', targetCtx, scale) {
+  const s = scale || SCALE;
+  const tctx = targetCtx || ctx;
+  const W=totalW(),H=totalH();
+
+  if (!targetCtx) {
+    canvas.width=W*s;canvas.height=H*s;
+    canvas.style.width=W+'px';canvas.style.height=H+'px';
+  }
+  tctx.setTransform(s,0,0,s,0,0);
+
+  // Background
+  if(bgMode==='dark'){tctx.fillStyle='#020810';tctx.fillRect(0,0,W,H)}
+  else if(bgMode==='white'){tctx.fillStyle='#ffffff';tctx.fillRect(0,0,W,H)}
+  // transparent = no fill
+
+  const labelColor = bgMode==='white' ? '#333' : '#3a7090';
+  const dimColor = bgMode==='white' ? '#888' : '#1a3a52';
+  const axisColor = bgMode==='white' ? '#555' : '#2a5a7a';
+  const lineColor = bgMode==='white' ? '#ddd' : '#0a1f35';
+
+  ENCODERS.forEach((enc,ei)=>{
+    const y=MARGIN.top+ei*(CELL_H+GAP);
+    MODEL_DATA[enc].forEach((rmse,cam)=>{
+      const norm=(rmse-gMin)/(gMax-gMin);const[r,g,b]=lerpC(currentScheme,norm);
+      tctx.fillStyle=`rgb(${r},${g},${b})`;tctx.fillRect(MARGIN.left+cam*CELL_W,y,CELL_W-.5,CELL_H);
+    });
+    tctx.fillStyle=labelColor;tctx.font='15px JetBrains Mono,monospace';tctx.textAlign='right';tctx.textBaseline='middle';
+    tctx.fillText(enc,MARGIN.left-10,y+CELL_H/2);
+    const mean=MODEL_DATA[enc].reduce((a,b)=>a+b,0)/N_CAM;
+    tctx.fillStyle=dimColor;tctx.font='13px JetBrains Mono,monospace';tctx.textAlign='left';
+    tctx.fillText(mean.toFixed(4),MARGIN.left+N_CAM*CELL_W+6,y+CELL_H/2);
+  });
+
+  tctx.fillStyle=dimColor;tctx.font='13px JetBrains Mono,monospace';tctx.textAlign='center';tctx.textBaseline='top';
+  [0,14,28,42,56,70,84,98,111].forEach(cam=>{tctx.fillText(String(cam),MARGIN.left+cam*CELL_W+CELL_W/2,MARGIN.top+N_ENC*(CELL_H+GAP)+8)});
+  tctx.fillStyle=axisColor;tctx.font='14px JetBrains Mono,monospace';tctx.textAlign='center';
+  tctx.fillText('CAMERA POSITION',MARGIN.left+(N_CAM*CELL_W)/2,MARGIN.top+N_ENC*(CELL_H+GAP)+28);
+
+  ENCODERS.forEach((enc,ei)=>{const y=MARGIN.top+ei*(CELL_H+GAP)+CELL_H;tctx.strokeStyle=lineColor;tctx.lineWidth=.5;tctx.beginPath();tctx.moveTo(MARGIN.left,y+GAP/2);tctx.lineTo(MARGIN.left+N_CAM*CELL_W,y+GAP/2);tctx.stroke()});
+
+  tctx.setTransform(1,0,0,1,0,0);
+  if (!targetCtx) drawColorbar();
+}
+
+function drawColorbar(){const cb=document.getElementById('cbar'),cc=cb.getContext('2d');cc.clearRect(0,0,300,14);for(let x=0;x<300;x++){const t=x/299;const[r,g,b]=lerpC(currentScheme,t);cc.fillStyle=`rgb(${r},${g},${b})`;cc.fillRect(x,0,1,14)}}
+
+function setCS(s){currentScheme=s;drawHeatmap();document.querySelectorAll('#controls .cbtn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().includes(s.substring(0,4))))}
+
+// Tooltip
+const tooltipEl=document.getElementById('tooltip');
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect(),mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const cam=Math.floor((mx-MARGIN.left)/CELL_W),encIdx=Math.floor((my-MARGIN.top)/(CELL_H+GAP));
+  if(cam>=0&&cam<N_CAM&&encIdx>=0&&encIdx<N_ENC){
+    const enc=ENCODERS[encIdx],rmse=MODEL_DATA[enc][cam],norm=((rmse-gMin)/(gMax-gMin)*100).toFixed(1);
+    const mean=MODEL_DATA[enc].reduce((a,b)=>a+b,0)/N_CAM;
+    drawHeatmap();
+    // highlight cell
+    const cx=MARGIN.left+cam*CELL_W,cy=MARGIN.top+encIdx*(CELL_H+GAP);
+    ctx.save();ctx.setTransform(SCALE,0,0,SCALE,0,0);ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.strokeRect(cx-1,cy-1,CELL_W+1,CELL_H+2);
+    ctx.strokeStyle='rgba(255,255,255,0.08)';ctx.lineWidth=1;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(cx+CELL_W/2,MARGIN.top);ctx.lineTo(cx+CELL_W/2,MARGIN.top+N_ENC*(CELL_H+GAP));ctx.moveTo(MARGIN.left,cy+CELL_H/2);ctx.lineTo(MARGIN.left+N_CAM*CELL_W,cy+CELL_H/2);ctx.stroke();ctx.setLineDash([]);ctx.setTransform(1,0,0,1,0,0);ctx.restore();
+    const mp=((rmse-gMin)/(gMax-gMin)*100);
+    tooltipEl.style.display='block';tooltipEl.style.left=(e.clientX+16)+'px';tooltipEl.style.top=(e.clientY-10)+'px';
+    tooltipEl.innerHTML=`<b>${enc}</b><div class="trow"><span>Camera</span><span class="tval">${cam}</span></div><div class="trow"><span>RMSE</span><span class="tval">${rmse.toFixed(5)}</span></div><div class="trow"><span>Percentile</span><span class="tval">${norm}%</span></div><div class="trow"><span>Enc Mean</span><span>${mean.toFixed(5)}</span></div><div class="bar"><div class="marker" style="left:${mp}%"></div></div>`;
+  }else tooltipEl.style.display='none';
+});
+canvas.addEventListener('mouseleave',()=>{tooltipEl.style.display='none';drawHeatmap()});
+
+// ═══ EXPORT ═══
+const EX_SCALE = 4;
+function renderHiRes(bgMode) {
+  const W=totalW(),H=totalH();
+  const oc=document.createElement('canvas');
+  oc.width=W*EX_SCALE;oc.height=H*EX_SCALE;
+  const octx=oc.getContext('2d');
+  drawHeatmap(bgMode,octx,EX_SCALE);
+  return oc;
+}
+function dl(url,fn){const a=document.createElement('a');a.href=url;a.download=fn;a.click()}
+function exportPNG(mode){const oc=renderHiRes(mode==='transparent'?'transparent':'white');dl(oc.toDataURL('image/png'),`heatgrid_5376_${mode}.png`)}
+function exportPDF(){const oc=renderHiRes('white');const W=totalW(),H=totalH();const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:W>H?'landscape':'portrait',unit:'px',format:[W,H]});pdf.addImage(oc.toDataURL('image/png'),'PNG',0,0,W,H);pdf.save('heatgrid_5376.pdf')}
+
+// ═══ CROP ═══
+let cropImg=null,cropRect=null,cropDragging=false,cropStart={x:0,y:0};
+const cropOverlay=document.getElementById('crop-overlay'),cropCanvas=document.getElementById('crop-canvas'),cropCtx=cropCanvas.getContext('2d'),cropBar=document.getElementById('crop-bar');
+function startCrop(){
+  const oc=renderHiRes('dark');
+  cropImg=new Image();cropImg.onload=()=>{
+    // Show at screen size
+    cropCanvas.width=innerWidth;cropCanvas.height=innerHeight;
+    cropOverlay.style.display='block';cropBar.style.display='flex';cropRect=null;drawCP();
+  };cropImg.src=oc.toDataURL('image/png');
+}
+function drawCP(){
+  cropCtx.clearRect(0,0,cropCanvas.width,cropCanvas.height);
+  cropCtx.fillStyle='#020810';cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);
+  // Center the heatmap image
+  const iw=totalW(),ih=totalH();
+  const offX=(cropCanvas.width-iw)/2,offY=(cropCanvas.height-ih)/2;
+  cropCtx.drawImage(cropImg,0,0,cropImg.width,cropImg.height,offX,offY,iw,ih);
+  if(cropRect){
+    const{x,y,w,h}=cropRect;
+    cropCtx.fillStyle='rgba(0,0,0,0.6)';cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);
+    cropCtx.save();cropCtx.beginPath();cropCtx.rect(0,0,cropCanvas.width,cropCanvas.height);cropCtx.rect(x,y+h,w,-h);cropCtx.clip('evenodd');cropCtx.fillStyle='rgba(0,0,0,0.6)';cropCtx.fillRect(0,0,cropCanvas.width,cropCanvas.height);cropCtx.restore();
+    cropCtx.drawImage(cropImg,0,0,cropImg.width,cropImg.height,offX,offY,iw,ih);
+    cropCtx.strokeStyle='#06D6A0';cropCtx.lineWidth=2;cropCtx.setLineDash([6,4]);cropCtx.strokeRect(x,y,w,h);cropCtx.setLineDash([]);
+    document.getElementById('crop-dims').textContent=`${Math.abs(Math.round(w*EX_SCALE))}×${Math.abs(Math.round(h*EX_SCALE))}px`;
+  }
+}
+cropCanvas.addEventListener('mousedown',e=>{cropDragging=true;cropStart={x:e.clientX,y:e.clientY};cropRect=null});
+cropCanvas.addEventListener('mousemove',e=>{if(!cropDragging)return;cropRect={x:Math.min(cropStart.x,e.clientX),y:Math.min(cropStart.y,e.clientY),w:Math.abs(e.clientX-cropStart.x),h:Math.abs(e.clientY-cropStart.y)};drawCP()});
+cropCanvas.addEventListener('mouseup',()=>cropDragging=false);
+function applyCrop(mode){
+  if(!cropRect||cropRect.w<5)return;
+  const{x,y,w,h}=cropRect;
+  const bg=mode==='pdf'?'white':mode;
+  const oc=renderHiRes(bg);
+  const iw=totalW(),ih=totalH();
+  const offX=(cropCanvas.width-iw)/2,offY=(cropCanvas.height-ih)/2;
+  // Map crop rect to hi-res coordinates
+  const sx=(x-offX)/iw*oc.width, sy=(y-offY)/ih*oc.height;
+  const sw=w/iw*oc.width, sh=h/ih*oc.height;
+  const tc=document.createElement('canvas');tc.width=Math.abs(sw);tc.height=Math.abs(sh);
+  const tctx=tc.getContext('2d');
+  if(bg==='white'){tctx.fillStyle='#fff';tctx.fillRect(0,0,tc.width,tc.height)}
+  tctx.drawImage(oc,Math.max(0,sx),Math.max(0,sy),Math.abs(sw),Math.abs(sh),0,0,tc.width,tc.height);
+  if(mode==='pdf'){const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:tc.width>tc.height?'landscape':'portrait',unit:'px',format:[tc.width/EX_SCALE,tc.height/EX_SCALE]});pdf.addImage(tc.toDataURL('image/png'),'PNG',0,0,tc.width/EX_SCALE,tc.height/EX_SCALE);pdf.save('heatgrid_crop.pdf')}
+  else dl(tc.toDataURL('image/png'),`heatgrid_crop_${mode}.png`);
+  cancelCrop();
+}
+function cancelCrop(){cropOverlay.style.display='none';cropBar.style.display='none';cropRect=null}
+
+drawHeatmap();
+</script>
+
+<style id="export-styles">
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&display=swap');
+  #export-panel {
+    position:fixed; bottom:28px; left:22px; z-index:9999;
+    pointer-events:all; display:flex; flex-direction:column; gap:5px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+  }
+  .epanel-label { font-size:13px; color:#1a3a52; letter-spacing:3px; margin-bottom:2px; text-transform:uppercase; }
+  .epanel-btn {
+
+    padding:10px 18px; font-size:10px; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    cursor:pointer; text-transform:uppercase; border:1px solid; transition:all .25s;
+    white-space:nowrap; display:flex; align-items:center; gap:8px;
+  }
+  .epanel-btn.et { background:rgba(76,201,240,.04); color:#4CC9F0; border-color:#4CC9F044; }
+  .epanel-btn.et:hover { background:rgba(76,201,240,.14); box-shadow:0 0 14px #4CC9F022; }
+  .epanel-btn.ew { background:rgba(255,255,255,.04); color:#8899aa; border-color:#44556644; }
+  .epanel-btn.ew:hover { background:rgba(255,255,255,.12); box-shadow:0 0 14px #ffffff11; }
+  .epanel-btn.ep { background:rgba(247,37,133,.04); color:#F72585; border-color:#F7258544; }
+  .epanel-btn.ep:hover { background:rgba(247,37,133,.14); box-shadow:0 0 14px #F7258522; }
+  .epanel-btn.ec { background:rgba(6,214,160,.04); color:#06D6A0; border-color:#06D6A044; }
+  .epanel-btn.ec:hover { background:rgba(6,214,160,.14); box-shadow:0 0 14px #06D6A022; }
+
+  #crop-overlay-univ {
+    position:fixed; inset:0; z-index:10000; display:none; cursor:crosshair;
+  }
+  #crop-overlay-univ canvas { position:absolute; top:0; left:0; }
+  #crop-bar-univ {
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    z-index:10001; background:rgba(2,8,20,.96); border:1px solid #1a3a5c;
+    padding:14px 22px; font-size:10px; color:#aaa; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    pointer-events:all; display:none; gap:14px; align-items:center;
+  }
+  #crop-bar-univ button {
+    padding:10px 20px; font-size:13px; letter-spacing:2px;
+    font-family:'JetBrains Mono','Courier New',monospace;
+    cursor:pointer; text-transform:uppercase; border:1px solid; transition:all .2s;
+  }
+  .ucrop-ok { background:rgba(6,214,160,.1); color:#06D6A0; border-color:#06D6A0; }
+  .ucrop-ok:hover { background:rgba(6,214,160,.25); }
+  .ucrop-cancel { background:rgba(247,37,133,.1); color:#F72585; border-color:#F72585; }
+  .ucrop-cancel:hover { background:rgba(247,37,133,.25); }
+  .ucrop-info { color:#4CC9F0; }
+</style>
+
+<div id="export-panel">
+  <div class="epanel-label">Export Options</div>
+  <button class="epanel-btn et" onclick="univExportPNG('transparent')">⬇ PNG Transparent</button>
+  <button class="epanel-btn ew" onclick="univExportPNG('white')">⬇ PNG White Background</button>
+  <button class="epanel-btn ep" onclick="univExportPDF()">⬇ PDF Document</button>
+  <button class="epanel-btn ec" onclick="univStartCrop()">✂ Crop &amp; Export</button>
+</div>
+<div id="crop-overlay-univ"><canvas id="crop-cvs-univ"></canvas></div>
+<div id="crop-bar-univ">
+  <span class="ucrop-info">Drag to select region</span>
+  <span id="crop-dims-univ"></span>
+  <button class="ucrop-ok" onclick="univApplyCrop('transparent')">Transparent</button>
+  <button class="ucrop-ok" onclick="univApplyCrop('white')">White BG</button>
+  <button class="ucrop-ok" onclick="univApplyCrop('pdf')">PDF</button>
+  <button class="ucrop-cancel" onclick="univCancelCrop()">Cancel</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+// ═══ HEATGRID EXPORT (canvas-based) ═══
+const _USCALE = 4;
+function univExportPNG(mode) {
+  const oc = renderHiRes(mode === 'transparent' ? 'transparent' : 'white');
+  const a = document.createElement('a'); a.href = oc.toDataURL('image/png');
+  a.download = 'heatgrid_5376_' + mode + '.png'; a.click();
+}
+function univExportPDF() {
+  const oc = renderHiRes('white');
+  const W = totalW(), H = totalH();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: W > H ? 'landscape' : 'portrait', unit: 'px', format: [W, H] });
+  pdf.addImage(oc.toDataURL('image/png'), 'PNG', 0, 0, W, H);
+  pdf.save('heatgrid_5376.pdf');
+}
+
+let _cImg=null,_cRect=null,_cDrag=false,_cStart={x:0,y:0};
+const _cOv=document.getElementById('crop-overlay-univ'),_cCvs=document.getElementById('crop-cvs-univ'),_cCtx=_cCvs.getContext('2d'),_cBar=document.getElementById('crop-bar-univ');
+function univStartCrop(){
+  const oc=renderHiRes('dark'); _cImg=new Image();_cImg.onload=()=>{
+    _cCvs.width=innerWidth;_cCvs.height=innerHeight;_cOv.style.display='block';_cBar.style.display='flex';_cRect=null;_drawC();
+  };_cImg.src=oc.toDataURL('image/png');
+}
+function _drawC(){_cCtx.clearRect(0,0,_cCvs.width,_cCvs.height);const iw=totalW(),ih=totalH();const ox=(_cCvs.width-iw)/2,oy=(_cCvs.height-ih)/2;_cCtx.fillStyle='#020810';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);_cCtx.drawImage(_cImg,0,0,_cImg.width,_cImg.height,ox,oy,iw,ih);if(_cRect){const{x,y,w,h}=_cRect;_cCtx.fillStyle='rgba(0,0,0,0.6)';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);_cCtx.save();_cCtx.beginPath();_cCtx.rect(0,0,_cCvs.width,_cCvs.height);_cCtx.rect(x,y+h,w,-h);_cCtx.clip('evenodd');_cCtx.fillStyle='rgba(0,0,0,0.6)';_cCtx.fillRect(0,0,_cCvs.width,_cCvs.height);_cCtx.restore();_cCtx.drawImage(_cImg,0,0,_cImg.width,_cImg.height,ox,oy,iw,ih);_cCtx.strokeStyle='#06D6A0';_cCtx.lineWidth=2;_cCtx.setLineDash([6,4]);_cCtx.strokeRect(x,y,w,h);_cCtx.setLineDash([]);document.getElementById('crop-dims-univ').textContent=Math.abs(Math.round(w*_USCALE))+'×'+Math.abs(Math.round(h*_USCALE))+'px'}}
+_cCvs.addEventListener('mousedown',e=>{_cDrag=true;_cStart={x:e.clientX,y:e.clientY};_cRect=null});
+_cCvs.addEventListener('mousemove',e=>{if(!_cDrag)return;_cRect={x:Math.min(_cStart.x,e.clientX),y:Math.min(_cStart.y,e.clientY),w:Math.abs(e.clientX-_cStart.x),h:Math.abs(e.clientY-_cStart.y)};_drawC()});
+_cCvs.addEventListener('mouseup',()=>_cDrag=false);
+function univApplyCrop(mode){if(!_cRect||_cRect.w<5)return;const bg=mode==='pdf'?'white':mode;const oc=renderHiRes(bg);const iw=totalW(),ih=totalH();const ox=(_cCvs.width-iw)/2,oy=(_cCvs.height-ih)/2;const{x,y,w,h}=_cRect;const sx=(x-ox)/iw*oc.width,sy=(y-oy)/ih*oc.height;const sw=w/iw*oc.width,sh=h/ih*oc.height;const tc=document.createElement('canvas');tc.width=Math.abs(sw);tc.height=Math.abs(sh);const tctx=tc.getContext('2d');if(bg==='white'){tctx.fillStyle='#fff';tctx.fillRect(0,0,tc.width,tc.height)}tctx.drawImage(oc,Math.max(0,sx),Math.max(0,sy),Math.abs(sw),Math.abs(sh),0,0,tc.width,tc.height);if(mode==='pdf'){const{jsPDF}=window.jspdf;const pdf=new jsPDF({orientation:tc.width>tc.height?'landscape':'portrait',unit:'px',format:[tc.width/_USCALE,tc.height/_USCALE]});pdf.addImage(tc.toDataURL('image/png'),'PNG',0,0,tc.width/_USCALE,tc.height/_USCALE);pdf.save('heatgrid_crop.pdf')}else{const a=document.createElement('a');a.href=tc.toDataURL('image/png');a.download='heatgrid_crop_'+mode+'.png';a.click()}univCancelCrop()}
+function univCancelCrop(){_cOv.style.display='none';_cBar.style.display='none';_cRect=null}
+</script>
+
+</body>
+</html>

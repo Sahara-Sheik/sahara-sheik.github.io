@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Battle Arena · Single-View vs Multi-View</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&family=Orbitron:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#020810;overflow:hidden;font-family:'JetBrains Mono',monospace;color:#8899aa}
+
+  /* Split */
+  #arena{display:flex;width:100vw;height:100vh;position:relative}
+  .side{flex:1;position:relative;overflow:hidden}
+  #divider{position:absolute;left:50%;top:0;width:2px;height:100%;background:linear-gradient(to bottom,transparent,#F72585,#4CC9F0,transparent);z-index:20;transform:translateX(-50%)}
+  .side canvas{display:block;width:100%;height:100%}
+
+  /* Side labels */
+  .side-label{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:11px;letter-spacing:4px;text-transform:uppercase;z-index:15;text-align:center}
+  .side-label .name{font-size:16px;font-weight:700;letter-spacing:3px;margin-bottom:2px}
+  #left-side .side-label .name{color:#4361EE;text-shadow:0 0 20px #4361EEaa}
+  #right-side .side-label .name{color:#F72585;text-shadow:0 0 20px #F72585aa}
+  .side-label .nrmse{font-size:22px;font-weight:800;font-family:'Orbitron',monospace}
+  #left-side .side-label .nrmse{color:#4361EE}
+  #right-side .side-label .nrmse{color:#F72585}
+
+  /* Winner glow borders */
+  .side.winning{box-shadow:inset 0 0 60px rgba(6,214,160,0.15)}
+  .side.losing{box-shadow:inset 0 0 40px rgba(255,60,60,0.08)}
+
+  /* Scoreboard */
+  #scoreboard{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:30;text-align:center;padding:12px 40px;background:linear-gradient(180deg,rgba(2,8,16,0.95),rgba(2,8,16,0.7),transparent);pointer-events:none;min-width:500px}
+  #scoreboard .title{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:8px;color:#1a3a5c;text-transform:uppercase;margin-bottom:4px}
+  #scores{display:flex;align-items:center;justify-content:center;gap:20px}
+  #sv-score{font-family:'Orbitron',monospace;font-size:48px;font-weight:900;color:#4361EE;text-shadow:0 0 30px #4361EE88;min-width:80px;text-align:right}
+  #score-vs{color:#1a3a5c;font-size:14px;letter-spacing:4px}
+  #mv-score{font-family:'Orbitron',monospace;font-size:48px;font-weight:900;color:#F72585;text-shadow:0 0 30px #F7258588;min-width:80px;text-align:left}
+  #round-info{font-size:10px;letter-spacing:3px;color:#2a5a7a;margin-top:2px}
+
+  /* DOF comparison strip */
+  #dof-strip{position:fixed;bottom:0;left:0;right:0;z-index:25;display:flex;justify-content:center;gap:0;background:linear-gradient(0deg,rgba(2,8,16,0.95),rgba(2,8,16,0.7),transparent);padding:8px 0 6px;pointer-events:none}
+  .dof-cell{text-align:center;width:calc(100%/6);padding:0 8px}
+  .dof-cell .dof-name{font-size:8px;letter-spacing:2px;color:#2a5a7a;text-transform:uppercase;margin-bottom:3px}
+  .dof-cell .bars{display:flex;justify-content:center;gap:3px;align-items:flex-end;height:30px}
+  .dof-cell .bar{width:18px;border-radius:2px 2px 0 0;transition:height 0.3s ease}
+  .dof-cell .bar.sv{background:#4361EE}
+  .dof-cell .bar.mv{background:#F72585}
+  .dof-cell .winner-dot{width:6px;height:6px;border-radius:50%;margin:3px auto 0;transition:all 0.3s}
+
+  /* Controls */
+  #ctrl{position:fixed;top:12px;right:12px;z-index:30;display:flex;gap:4px;pointer-events:all}
+  .cbtn{padding:6px 10px;font-size:9px;letter-spacing:2px;font-family:inherit;cursor:pointer;background:rgba(255,255,255,.02);color:#2a5a7a;border:1px solid #0d2a44;transition:all .2s}
+  .cbtn:hover{border-color:#4CC9F0;color:#4CC9F0}
+  .cbtn.active{background:rgba(247,37,133,.08);color:#F72585;border-color:#F72585}
+
+  /* Flash overlay for round wins */
+  .flash{position:absolute;inset:0;z-index:10;pointer-events:none;opacity:0;transition:opacity 0.15s}
+  #left-side .flash{background:radial-gradient(circle at center,rgba(67,97,238,0.3),transparent 70%)}
+  #right-side .flash{background:radial-gradient(circle at center,rgba(247,37,133,0.3),transparent 70%)}
+</style>
+</head>
+<body>
+
+<div id="arena">
+  <div id="left-side" class="side">
+    <canvas id="c-left"></canvas>
+    <div class="flash" id="flash-left"></div>
+    <div class="side-label">
+      <div class="name">SINGLE-VIEW</div>
+      <div class="nrmse" id="sv-live-rmse">0.000</div>
+    </div>
+  </div>
+  <div id="divider"></div>
+  <div id="right-side" class="side">
+    <canvas id="c-right"></canvas>
+    <div class="flash" id="flash-right"></div>
+    <div class="side-label">
+      <div class="name">MULTI-VIEW</div>
+      <div class="nrmse" id="mv-live-rmse">0.000</div>
+    </div>
+  </div>
+</div>
+
+<div id="scoreboard">
+  <div class="title">Visual Proprioception · Battle Arena</div>
+  <div id="scores">
+    <div id="sv-score">0</div>
+    <div id="score-vs">VS</div>
+    <div id="mv-score">0</div>
+  </div>
+  <div id="round-info">FRAME <span id="frame-counter">0</span> / <span id="total-frames">200</span></div>
+</div>
+
+<div id="dof-strip"></div>
+
+<div id="ctrl">
+  <button class="cbtn active" onclick="togglePlay()">▶ PLAY</button>
+  <button class="cbtn" onclick="setSpeed(0.5)">½×</button>
+  <button class="cbtn active" onclick="setSpeed(1)">1×</button>
+  <button class="cbtn" onclick="setSpeed(2)">2×</button>
+  <button class="cbtn" onclick="resetArena()">⟲ RESET</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+const N = 300;
+const DOF_NAMES = ['Height','Distance','Heading','Wr.Angle','Wr.Rot','Gripper'];
+const DOF_HEX = ['#4CC9F0','#06D6A0','#FFB703','#F72585','#4361EE','#B5179E'];
+
+function genData(){
+  const gt=[],sv=[],mv=[];
+  for(let i=0;i<N;i++){
+    const t=i/N*Math.PI*6;
+    const g=[
+      .3+.22*Math.sin(t),.4+.28*Math.sin(t*.7+1),.5+.32*Math.sin(t*.5+2),
+      .4+.18*Math.cos(t*.8),.5+.18*Math.sin(t*1.2+.5),.3+.22*Math.abs(Math.sin(t*.3))
+    ];
+    gt.push(g);
+    sv.push(g.map((v,d)=>v+(Math.random()-.5)*[.14,.16,.08,.10,.20,.16][d]));
+    mv.push(g.map((v,d)=>v+(Math.random()-.5)*[.06,.08,.06,.06,.14,.10][d]));
+  }
+  return{gt,sv,mv};
+}
+const D=genData();
+document.getElementById('total-frames').textContent=N;
+
+// ═══════════════════════════════════════════════════════════════
+// DOF STRIP
+// ═══════════════════════════════════════════════════════════════
+const strip=document.getElementById('dof-strip');
+const dofCells=[];
+DOF_NAMES.forEach((name,i)=>{
+  const cell=document.createElement('div');
+  cell.className='dof-cell';
+  cell.innerHTML=`<div class="dof-name" style="color:${DOF_HEX[i]}">${name}</div><div class="bars"><div class="bar sv" id="bar-sv-${i}"></div><div class="bar mv" id="bar-mv-${i}"></div></div><div class="winner-dot" id="dot-${i}"></div>`;
+  strip.appendChild(cell);
+  dofCells.push(cell);
+});
+
+// ═══════════════════════════════════════════════════════════════
+// ROBOT ARM BUILDER
+// ═══════════════════════════════════════════════════════════════
+function buildRobotArm(scene, color, isGT=false){
+  const arm={joints:[],group:new THREE.Group()};
+  const c=new THREE.Color(color);
+  const matBody=new THREE.MeshStandardMaterial({color:c,metalness:.6,roughness:.3,transparent:!isGT,opacity:isGT?1:.85});
+  const matJoint=new THREE.MeshStandardMaterial({color:0xffffff,emissive:c,emissiveIntensity:.3,metalness:.8,roughness:.2});
+  const matGripper=new THREE.MeshStandardMaterial({color:c,emissive:c,emissiveIntensity:.15,metalness:.5,roughness:.4});
+
+  // Base platform
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.35,.4,.08,24),matBody);
+  arm.group.add(base);
+
+  // Turret joint (heading)
+  const turret=new THREE.Group();
+  turret.position.y=.08;
+  arm.group.add(turret);
+  const turretJoint=new THREE.Mesh(new THREE.SphereGeometry(.12,16,16),matJoint);
+  turret.add(turretJoint);
+  arm.joints.push({mesh:turretJoint,group:turret});
+
+  // Upper arm
+  const upperArm=new THREE.Group();
+  upperArm.position.y=.12;
+  turret.add(upperArm);
+  const upperMesh=new THREE.Mesh(new THREE.CylinderGeometry(.06,.07,.7,12),matBody);
+  upperMesh.position.y=.35;
+  upperArm.add(upperMesh);
+
+  // Elbow joint
+  const elbow=new THREE.Group();
+  elbow.position.y=.72;
+  upperArm.add(elbow);
+  const elbowJoint=new THREE.Mesh(new THREE.SphereGeometry(.09,12,12),matJoint);
+  elbow.add(elbowJoint);
+  arm.joints.push({mesh:elbowJoint,group:elbow});
+
+  // Lower arm
+  const lowerArm=new THREE.Group();
+  lowerArm.position.y=.08;
+  elbow.add(lowerArm);
+  const lowerMesh=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,.55,12),matBody);
+  lowerMesh.position.y=.27;
+  lowerArm.add(lowerMesh);
+
+  // Wrist joint
+  const wrist=new THREE.Group();
+  wrist.position.y=.58;
+  lowerArm.add(wrist);
+  const wristJoint=new THREE.Mesh(new THREE.SphereGeometry(.07,12,12),matJoint);
+  wrist.add(wristJoint);
+  arm.joints.push({mesh:wristJoint,group:wrist});
+
+  // Gripper base
+  const gripBase=new THREE.Group();
+  gripBase.position.y=.06;
+  wrist.add(gripBase);
+
+  // Gripper fingers
+  const fingerL=new THREE.Mesh(new THREE.BoxGeometry(.03,.15,.02),matGripper);
+  fingerL.position.set(-.06,.08,0);
+  gripBase.add(fingerL);
+  const fingerR=new THREE.Mesh(new THREE.BoxGeometry(.03,.15,.02),matGripper);
+  fingerR.position.set(.06,.08,0);
+  gripBase.add(fingerR);
+
+  arm.turret=turret;
+  arm.upperArm=upperArm;
+  arm.elbow=elbow;
+  arm.lowerArm=lowerArm;
+  arm.wrist=wrist;
+  arm.gripBase=gripBase;
+  arm.fingerL=fingerL;
+  arm.fingerR=fingerR;
+  arm.allJoints=[turretJoint,elbowJoint,wristJoint];
+
+  scene.add(arm.group);
+  return arm;
+}
+
+function poseArm(arm, dofs){
+  const [height,distance,heading,wristAngle,wristRot,gripper]=dofs;
+  arm.turret.rotation.y=(heading-.5)*Math.PI*1.2;
+  arm.upperArm.rotation.z=(distance-.5)*-.6;
+  arm.upperArm.position.y=.12+(height-.5)*.3;
+  arm.elbow.rotation.z=(wristAngle-.5)*-.8;
+  arm.wrist.rotation.y=(wristRot-.5)*Math.PI;
+  const spread=.03+gripper*.06;
+  arm.fingerL.position.x=-spread;
+  arm.fingerR.position.x=spread;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCENE SETUP — TWO SEPARATE SCENES
+// ═══════════════════════════════════════════════════════════════
+function createScene(canvasId){
+  const canvas=document.getElementById(canvasId);
+  const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.2;
+
+  const scene=new THREE.Scene();
+  scene.background=new THREE.Color(0x020810);
+  scene.fog=new THREE.FogExp2(0x020810,0.08);
+
+  const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+  camera.position.set(1.5,1.8,2.5);
+  camera.lookAt(0,.6,0);
+
+  // Lighting
+  scene.add(new THREE.AmbientLight(0x0a1830,2.5));
+  const dl=new THREE.DirectionalLight(0x6688aa,1.5);
+  dl.position.set(3,5,3);dl.castShadow=true;scene.add(dl);
+
+  // Ground
+  const ground=new THREE.Mesh(
+    new THREE.PlaneGeometry(8,8),
+    new THREE.MeshStandardMaterial({color:0x030a14,metalness:.9,roughness:.8})
+  );
+  ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+
+  // Grid
+  const gridPts=[];
+  for(let i=-4;i<=4;i+=.5){
+    gridPts.push(-4,0.001,i,4,0.001,i);
+    gridPts.push(i,0.001,-4,i,0.001,4);
+  }
+  const gridGeo=new THREE.BufferGeometry();
+  gridGeo.setAttribute('position',new THREE.Float32BufferAttribute(gridPts,3));
+  scene.add(new THREE.LineSegments(gridGeo,new THREE.LineBasicMaterial({color:0x0a1a2a,transparent:true,opacity:.25})));
+
+  return{renderer,scene,camera,canvas};
+}
+
+const leftCtx=createScene('c-left');
+const rightCtx=createScene('c-right');
+
+// Add colored accent lights
+const pl1=new THREE.PointLight(0x4361EE,2,8);pl1.position.set(1,2,1);leftCtx.scene.add(pl1);
+const pl2=new THREE.PointLight(0xF72585,2,8);pl2.position.set(1,2,1);rightCtx.scene.add(pl2);
+
+// Build arms
+const gtArmL=buildRobotArm(leftCtx.scene,0xaaaaaa,true);
+const svArm=buildRobotArm(leftCtx.scene,0x4361EE);
+svArm.group.position.x=0;
+gtArmL.group.position.x=0;
+
+const gtArmR=buildRobotArm(rightCtx.scene,0xaaaaaa,true);
+const mvArm=buildRobotArm(rightCtx.scene,0xF72585);
+mvArm.group.position.x=0;
+gtArmR.group.position.x=0;
+
+// ═══════════════════════════════════════════════════════════════
+// JOINT ERROR GLOW — color joints by error
+// ═══════════════════════════════════════════════════════════════
+function updateJointGlow(arm, dofs, gtDofs, baseColor){
+  // Map DOFs to joints roughly: turret=heading, elbow=wrist_angle, wrist=wrist_rot
+  const jointDofs=[2,3,4]; // heading, wrist_angle, wrist_rot
+  arm.allJoints.forEach((joint,i)=>{
+    const err=Math.abs(dofs[jointDofs[i]]-gtDofs[jointDofs[i]]);
+    const intensity=Math.min(err*8,1);
+    // Lerp from green (low err) to red (high err)
+    const r=intensity;
+    const g=1-intensity;
+    joint.material.emissive.setRGB(r*.8,g*.6,.1);
+    joint.material.emissiveIntensity=.3+intensity*1.5;
+    const s=1+intensity*.4;
+    joint.scale.set(s,s,s);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════════════════
+function resize(){
+  const w=innerWidth/2,h=innerHeight;
+  [leftCtx,rightCtx].forEach(ctx=>{
+    ctx.renderer.setSize(w,h);
+    ctx.camera.aspect=w/h;
+    ctx.camera.updateProjectionMatrix();
+  });
+}
+resize();
+window.addEventListener('resize',resize);
+
+// ═══════════════════════════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════════════════════════
+let frame=0,playing=true,speed=1,svScore=0,mvScore=0;
+let accumulator=0;
+
+function togglePlay(){
+  playing=!playing;
+  document.querySelector('#ctrl .cbtn').textContent=playing?'⏸ PAUSE':'▶ PLAY';
+}
+function setSpeed(s){
+  speed=s;
+  document.querySelectorAll('#ctrl .cbtn').forEach(b=>{
+    if(b.textContent.includes('×'))b.classList.toggle('active',parseFloat(b.textContent)===s);
+  });
+}
+function resetArena(){frame=0;svScore=0;mvScore=0;accumulator=0;}
+
+function flash(side){
+  const el=document.getElementById(side==='sv'?'flash-left':'flash-right');
+  el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',200);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ANIMATION
+// ═══════════════════════════════════════════════════════════════
+const clock=new THREE.Clock();
+let lastScoreFrame=-10;
+
+function animate(){
+  requestAnimationFrame(animate);
+  const dt=clock.getDelta();
+  const time=clock.getElapsedTime();
+
+  if(playing){
+    accumulator+=dt*20*speed;
+    if(accumulator>=1){
+      frame=(frame+Math.floor(accumulator))%N;
+      accumulator%=1;
+    }
+  }
+
+  const f=frame;
+  const gt=D.gt[f],sv=D.sv[f],mv=D.mv[f];
+
+  // Pose arms
+  poseArm(gtArmL,gt);poseArm(svArm,sv);
+  poseArm(gtArmR,gt);poseArm(mvArm,mv);
+
+  // Make GT arms semi-transparent wireframe look
+  gtArmL.group.traverse(o=>{if(o.material){o.material.transparent=true;o.material.opacity=.25;o.material.wireframe=true}});
+  gtArmR.group.traverse(o=>{if(o.material){o.material.transparent=true;o.material.opacity=.25;o.material.wireframe=true}});
+
+  // Joint glow
+  updateJointGlow(svArm,sv,gt,0x4361EE);
+  updateJointGlow(mvArm,mv,gt,0xF72585);
+
+  // Calculate errors
+  let svTotalErr=0,mvTotalErr=0;
+  const svErrs=[],mvErrs=[];
+  for(let d=0;d<6;d++){
+    const se=Math.abs(sv[d]-gt[d]);
+    const me=Math.abs(mv[d]-gt[d]);
+    svErrs.push(se);mvErrs.push(me);
+    svTotalErr+=se*se;mvTotalErr+=me*me;
+  }
+  svTotalErr=Math.sqrt(svTotalErr/6);
+  mvTotalErr=Math.sqrt(mvTotalErr/6);
+
+  // Scoring — every 15 frames, award a point to the winner
+  if(f%15===0&&f!==lastScoreFrame){
+    lastScoreFrame=f;
+    if(svTotalErr<mvTotalErr){svScore++;flash('sv')}
+    else if(mvTotalErr<svTotalErr){mvScore++;flash('mv')}
+  }
+
+  // Update UI
+  document.getElementById('sv-score').textContent=svScore;
+  document.getElementById('mv-score').textContent=mvScore;
+  document.getElementById('frame-counter').textContent=f;
+  document.getElementById('sv-live-rmse').textContent=svTotalErr.toFixed(4);
+  document.getElementById('mv-live-rmse').textContent=mvTotalErr.toFixed(4);
+
+  // Side winning class
+  const ls=document.getElementById('left-side'),rs=document.getElementById('right-side');
+  ls.className='side '+(svTotalErr<mvTotalErr?'winning':'losing');
+  rs.className='side '+(mvTotalErr<svTotalErr?'winning':'losing');
+
+  // DOF bars
+  const maxErr=0.15;
+  for(let d=0;d<6;d++){
+    const svH=Math.min(svErrs[d]/maxErr*30,30);
+    const mvH=Math.min(mvErrs[d]/maxErr*30,30);
+    document.getElementById(`bar-sv-${d}`).style.height=svH+'px';
+    document.getElementById(`bar-mv-${d}`).style.height=mvH+'px';
+    const dot=document.getElementById(`dot-${d}`);
+    if(svErrs[d]<mvErrs[d]){dot.style.background='#4361EE';dot.style.boxShadow='0 0 6px #4361EE'}
+    else{dot.style.background='#F72585';dot.style.boxShadow='0 0 6px #F72585'}
+  }
+
+  // Gentle camera orbit
+  const orbitR=2.8;
+  const a=time*.15;
+  [leftCtx,rightCtx].forEach(ctx=>{
+    ctx.camera.position.x=Math.sin(a)*orbitR;
+    ctx.camera.position.z=Math.cos(a)*orbitR;
+    ctx.camera.position.y=1.5+Math.sin(time*.1)*.3;
+    ctx.camera.lookAt(0,.5,0);
+  });
+
+  leftCtx.renderer.render(leftCtx.scene,leftCtx.camera);
+  rightCtx.renderer.render(rightCtx.scene,rightCtx.camera);
+}
+animate();
+</script>
+</body>
+</html>
