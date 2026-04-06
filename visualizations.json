@@ -1,0 +1,245 @@
+[
+  {
+    "id": "armillary",
+    "file": "assets/viz/hero_armillary.html",
+    "title": "Armillary Sphere",
+    "description": "9 encoder orbits \u00b7 112 camera nodes \u00b7 RMSE \u2192 radius & glow",
+    "tech": "Three.js",
+    "project": "camera-optimization",
+    "wide": false
+  },
+  {
+    "id": "battle_arena",
+    "file": "assets/viz/battle_arena.html",
+    "title": "Battle Arena",
+    "description": "Single-view vs Multi-view \u2014 head-to-head RMSE comparison with winner glow",
+    "tech": "Three.js",
+    "project": "multi-view",
+    "wide": false
+  },
+  {
+    "id": "manhattan_skyline",
+    "file": "assets/viz/hero_manhattan.html",
+    "title": "Manhattan Skyline",
+    "description": "3D bar chart \u2014 model errors across Base, White, DR, Box, BoxBg, Bg, Real environments",
+    "tech": "Plotly.js",
+    "project": "domain-randomization",
+    "wide": true
+  },
+  {
+    "id": "sensory_dome",
+    "file": "assets/viz/sensory_dome.html",
+    "title": "Sensory Dome",
+    "description": "RMSE mapped to 112 camera coordinates on a 3D hemisphere",
+    "tech": "Canvas 2D",
+    "project": "camera-optimization",
+    "wide": false
+  },
+  {
+    "id": "proprioception_orbiter",
+    "file": "assets/viz/proprioception_orbiter_real.html",
+    "title": "Proprioception Orbiter",
+    "description": "Persistent trajectories \u00b7 Real-world model comparison with error-scale gradients",
+    "tech": "Three.js",
+    "project": "latent-representations",
+    "wide": false
+  },
+  {
+    "id": "error_terrain",
+    "file": "assets/viz/hero_terrain.html",
+    "title": "Error Terrain",
+    "description": "3D topographic surface \u2014 altitude encodes RMSE across encoders \u00d7 cameras",
+    "tech": "Three.js",
+    "project": "camera-optimization",
+    "wide": false
+  },
+  {
+    "id": "joint_heatmap_mv",
+    "file": "assets/viz/joint_heatmap.html",
+    "title": "Joint Heatmap",
+    "description": "DOF error thermal view \u2014 split-panel comparison across camera positions",
+    "tech": "Three.js",
+    "project": "multi-view",
+    "wide": false
+  },
+  {
+    "id": "rmse_heatgrid",
+    "file": "assets/viz/hero_heatgrid.html",
+    "title": "RMSE Heatgrid",
+    "description": "9 encoders \u00d7 112 cameras \u2014 every cell is one trained model",
+    "tech": "Canvas 2D",
+    "project": "camera-optimization",
+    "wide": false
+  },
+  {
+    "id": "smooth_hemisphere",
+    "file": "assets/viz/interactive_smooth_hemisphere.html",
+    "title": "Smooth Hemisphere",
+    "description": "Interactive interpolated accuracy surface over the camera hemisphere",
+    "tech": "Plotly.js",
+    "project": "camera-optimization",
+    "wide": false
+  },
+  {
+    "id": "manhattan_AL5D",
+    "file": "manhattan_AL5D.html",
+    "title": "Manhattan \u2014 AL5D",
+    "description": "6-DOF \u00b7 RMSE per joint \u00b7 Real robot",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "spider_AL5D",
+    "file": "spider_AL5D.html",
+    "title": "Encoder Battle \u2014 AL5D",
+    "description": "6-DOF \u00b7 Encoder comparison per joint",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "tracking_AL5D",
+    "file": "tracking_AL5D.html",
+    "title": "Live Tracking \u2014 AL5D",
+    "description": "6-DOF \u00b7 Animated proprioception trace",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "manhattan_Unitree_G1",
+    "file": "manhattan_Unitree_G1.html",
+    "title": "Manhattan \u2014 Unitree G1",
+    "description": "7-DOF \u00b7 RMSE per joint \u00b7 Sim robot",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "spider_Unitree_G1",
+    "file": "spider_Unitree_G1.html",
+    "title": "Encoder Battle \u2014 Unitree G1",
+    "description": "7-DOF \u00b7 Encoder comparison per joint",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "tracking_Unitree_G1",
+    "file": "tracking_Unitree_G1.html",
+    "title": "Live Tracking \u2014 Unitree G1",
+    "description": "7-DOF \u00b7 Animated proprioception trace",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "manhattan_Franka_Panda",
+    "file": "manhattan_Franka_Panda.html",
+    "title": "Manhattan \u2014 Franka Panda",
+    "description": "7-DOF \u00b7 RMSE per joint \u00b7 Real robot",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "spider_Franka_Panda",
+    "file": "spider_Franka_Panda.html",
+    "title": "Encoder Battle \u2014 Franka Panda",
+    "description": "7-DOF \u00b7 Encoder comparison per joint",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "tracking_Franka_Panda",
+    "file": "tracking_Franka_Panda.html",
+    "title": "Live Tracking \u2014 Franka Panda",
+    "description": "7-DOF \u00b7 Animated proprioception trace",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "transfer_globe",
+    "file": "transfer_globe.html",
+    "title": "Transfer Globe",
+    "description": "G1 \u2194 Franka \u00b7 Cross-robot encoder transfer arc diagram",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "transfer_cost",
+    "file": "transfer_cost.html",
+    "title": "Transfer Cost Panel",
+    "description": "Own vs transferred RMSE \u00b7 delta per encoder",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "summary",
+    "file": "summary.html",
+    "title": "Encoder Battle Dashboard",
+    "description": "All robots \u00b7 winners per joint \u00b7 animated radars",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": true
+  },
+  {
+    "id": "heatmap",
+    "file": "heatmap.html",
+    "title": "Grand Heatmap",
+    "description": "Full RMSE matrix \u00b7 all encoders \u00d7 all joints \u00b7 \u2605 = best per joint",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": true
+  },
+  {
+    "id": "leaderboard",
+    "file": "leaderboard.html",
+    "title": "Encoder Leaderboard",
+    "description": "Ranked across all robots \u00b7 podium \u00b7 breakdown",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "bump_chart",
+    "file": "bump_chart.html",
+    "title": "Ranking Flow",
+    "description": "Encoder rank positions shift across robot configurations",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "constellation",
+    "file": "constellation.html",
+    "title": "Constellation Map",
+    "description": "Robots as star clusters \u00b7 brightness = accuracy",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "model_showcase",
+    "file": "model_showcase.html",
+    "title": "Model Showcase",
+    "description": "Full RMSE table per encoder \u00b7 auto-cycles \u00b7 all robots",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  },
+  {
+    "id": "dataset_radar",
+    "file": "dataset_radar.html",
+    "title": "Dataset Radar",
+    "description": "One big radar per robot \u00b7 all encoders \u00b7 auto-cycles",
+    "tech": "Canvas 2D",
+    "project": "cross-robot",
+    "wide": false
+  }
+]

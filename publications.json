@@ -1,0 +1,60 @@
+[
+  {
+    "title": "Latent Representations for Visual Proprioception in Inexpensive Robots",
+    "authors": ["Sahara Sheikholeslami", "Ladislau Bölöni"],
+    "venue": "ICRA 2026",
+    "venueFull": "IEEE Int. Conf. on Robotics and Automation",
+    "year": 2026,
+    "status": "Accepted",
+    "type": "conference",
+    "abstract": "Exploring CNNs, VAEs, ViTs, and bags of uncalibrated fiducial markers for fast, single-pass visual proprioception from a single external camera on an inexpensive 6-DoF robot.",
+    "tags": ["Latent Representations", "Robotics", "Visual Proprioception"]
+  },
+  {
+    "title": "Multi-view Robot Proprioception with Asymmetric Camera Positions",
+    "authors": ["Sahara Sheikholeslami", "Ladislau Bölöni"],
+    "venue": "IROS 2026",
+    "venueFull": "IEEE/RSJ Int. Conf. on Intelligent Robots and Systems",
+    "year": 2026,
+    "status": "Under Review",
+    "type": "conference",
+    "abstract": "We propose multi-view visual proprioception from two asymmetrically mounted, uncalibrated RGB cameras. We evaluate 50 implementation variants across ViT-, CNN-, and VAE-based encoders and five distinct view fusion frameworks, finding up to 36.6% improvement over single-view methods.",
+    "tags": ["Multi-View Fusion", "Visual Proprioception", "Asymmetric Cameras"]
+  },
+  {
+    "title": "Domain Randomization for Learning Visual Proprioception for Robot Manipulators",
+    "authors": ["Sahara Sheikholeslami", "Robert-Anton Konievic", "Ladislau Bölöni", "Levente Tamas"],
+    "equalContribution": ["Sahara Sheikholeslami", "Robert-Anton Konievic"],
+    "venue": "ECCV 2026",
+    "venueFull": "European Conference on Computer Vision",
+    "year": 2026,
+    "status": "Under Review",
+    "type": "conference",
+    "abstract": "We study how different domain randomization techniques affect the accuracy of various visual proprioception models across 5,376 distinct models in a sim-to-real setting, evaluating multiple encoder architectures, camera positions, and randomization techniques.",
+    "tags": ["Domain Randomization", "Sim-to-Real", "Visual Proprioception"]
+  },
+  {
+    "title": "Optimal Camera Positions for Visual Robot Proprioception",
+    "authors": ["Robert-Anton Konievic", "Sahara Sheikholeslami",  "Levente Tamas", "Ladislau Bölöni"],
+    "equalContribution": ["Sahara Sheikholeslami", "Robert-Anton Konievic"],
+    "venue": "IROS 2026",
+    "venueFull": "IEEE/RSJ Int. Conf. on Intelligent Robots and Systems",
+    "year": 2026,
+    "status": "Under Review",
+    "type": "conference",
+    "abstract": "A framework for quantifying visual proprioception accuracy as a function of camera placement. Eight encoder configurations trained across 112 simulated and 20 real-world camera positions yield over 1,000 distinct models.",
+    "tags": ["Camera Optimization", "Visual Proprioception", "Sim-to-Real"]
+  },
+  {
+    "title": "Generalizing Visual Proprioception for Multiple Robot Configurations",
+    "authors": ["Robert-Anton Konievic", "Sahara Sheikholeslami", "Ladislau Bölöni", "Levente Tamas"],
+    "equalContribution": ["Sahara Sheikholeslami", "Robert-Anton Konievic"],
+    "venue": "ICRA 2026 Workshop",
+    "venueFull": "IEEE Int. Conf. on Robotics and Automation — MM-Spatial AI Workshop",
+    "year": 2026,
+    "status": "Under Review",
+    "type": "workshop",
+    "abstract": "We investigate the generalization of visual proprioception across three very different robot configurations: a low-cost 6DOF AL5D arm, a high-precision 7DOF Franka arm, and a humanoid G1 arm with 7DOF. We evaluate whether the same encoder-regressor architecture transfers across platforms and whether pre-trained vision encoders can be reused cross-robot with only a lightweight regressor refit.",
+    "tags": ["Cross-Robot Transfer", "Visual Proprioception", "Encoder Generalization", "Sim-to-Real"]
+  }
+]

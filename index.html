@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sahara Sheikholeslami — UCF Researcher</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- Custom cursor -->
+  <div class="cursor-dot" id="cursor-dot"></div>
+  <div class="cursor-ring" id="cursor-ring"></div>
+
+  <!-- Scroll progress -->
+  <div class="scroll-progress" id="scroll-progress"></div>
+
+  <!-- ═══ NAVIGATION ═══ -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo magnetic" data-strength="20">S<span class="dot">.</span>S</a>
+      <div class="nav-links" id="nav-links">
+        <a href="#about" data-section="about" class="magnetic" data-strength="15">About</a>
+        <a href="#research" data-section="research" class="magnetic" data-strength="15">Research</a>
+        <a href="#healthcare" data-section="healthcare" class="magnetic" data-strength="15">Healthcare AI</a>
+        <a href="#viz" data-section="viz" class="magnetic" data-strength="15">Visualizations</a>
+        <a href="#publications" data-section="publications" class="magnetic" data-strength="15">Publications</a>
+        <a href="#skills" data-section="skills" class="magnetic" data-strength="15">Skills</a>
+        <a href="#contact" data-section="contact" class="magnetic" data-strength="15">Contact</a>
+      </div>
+      <button class="nav-burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <!-- ═══ HERO — Three.js Particle Network ═══ -->
+  <header id="hero">
+    <div id="hero-3d"></div>
+    <!-- Parallax floating shapes -->
+    <div class="hero-parallax-layer" data-depth="0.03">
+      <div class="parallax-shape shape-ring" style="top:15%;left:8%"></div>
+      <div class="parallax-shape shape-cross" style="top:70%;left:85%"></div>
+    </div>
+    <div class="hero-parallax-layer" data-depth="0.06">
+      <div class="parallax-shape shape-dot" style="top:25%;left:78%"></div>
+      <div class="parallax-shape shape-ring" style="top:65%;left:12%"></div>
+    </div>
+    <div class="hero-parallax-layer" data-depth="0.1">
+      <div class="parallax-shape shape-triangle" style="top:80%;left:65%"></div>
+      <div class="parallax-shape shape-dot" style="top:10%;left:42%"></div>
+    </div>
+    <div class="hero-overlay">
+      <div class="hero-content">
+        <p class="hero-over reveal-text" data-delay="200">University of Central Florida — Computer Science</p>
+        <h1 class="hero-name" id="hero-name-scramble">Sahara<br/>Sheikholeslami</h1>
+        <div class="hero-rule"></div>
+        <p class="hero-tagline typewriter" id="hero-typewriter"></p>
+        <p class="hero-sub reveal-text" data-delay="800">Exploring how robots see and interact with the world via LLMs and computer vision</p>
+        <div class="hero-stats reveal-text" data-delay="1000">
+          <div class="hero-stat">
+            <span class="stat-num" data-count="5376">0</span>
+            <span class="stat-label">Models Trained</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-num" data-count="5">0</span>
+            <span class="stat-label">Publications</span>
+          </div>
+          <div class="hero-stat">
+            <span class="stat-num" data-count="16">0</span>
+            <span class="stat-label">Nat'l Rank / 150K</span>
+          </div>
+        </div>
+        <div class="hero-cta reveal-text" data-delay="1200">
+          <a href="#viz" class="btn-primary magnetic" data-strength="8">Explore Visualizations</a>
+          <a href="#publications" class="btn-ghost magnetic" data-strength="8">Publications</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-scroll-hint" id="scroll-hint">
+      <span>Scroll</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </div>
+  </header>
+
+  <!-- ═══ RESEARCH STATS TICKER ═══ -->
+  <div class="stats-ticker" aria-hidden="true">
+    <div class="ticker-track">
+      <span class="ticker-item"><em>5,376</em> Models Trained</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>112</em> Camera Positions</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>9</em> Encoder Architectures</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>3</em> Robot Platforms</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>50</em> Multi-View Variants</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>36.6%</em> Improvement over Single-View</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>7</em> Domain Randomization Techniques</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>6-DOF</em> AL5D · <em>7-DOF</em> Franka · <em>7-DOF</em> G1</span>
+      <span class="ticker-sep">◆</span>
+      <!-- Duplicate for seamless loop -->
+      <span class="ticker-item"><em>5,376</em> Models Trained</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>112</em> Camera Positions</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>9</em> Encoder Architectures</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>3</em> Robot Platforms</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>50</em> Multi-View Variants</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>36.6%</em> Improvement over Single-View</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>7</em> Domain Randomization Techniques</span>
+      <span class="ticker-sep">◆</span>
+      <span class="ticker-item"><em>6-DOF</em> AL5D · <em>7-DOF</em> Franka · <em>7-DOF</em> G1</span>
+      <span class="ticker-sep">◆</span>
+    </div>
+  </div>
+
+  <!-- ═══ ABOUT ═══ -->
+  <section id="about" class="section">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <h2 class="gradient-text">About</h2>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline">
+        <div class="timeline-item scroll-reveal" data-direction="left">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <!-- <span class="timeline-date">2017</span> -->
+            <h3>National Rank #16 / 150,000+</h3>
+            <p>Achieved at age 17 on Iran's National University Entrance Exam (Konkur), one full year ahead of the standard cohort.</p>
+          </div>
+        </div>
+        <div class="timeline-item scroll-reveal" data-direction="right">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <!-- <span class="timeline-date">2020–2023</span> -->
+            <h3>B.S. Computer Science — Summa Cum Laude</h3>
+            <p>University of Central Florida · 4.0 GPA · Completed in 3 years · President's Honor Roll every semester.</p>
+          </div>
+        </div>
+        <div class="timeline-item scroll-reveal" data-direction="left">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <!-- <span class="timeline-date">2023–2024</span> -->
+            <h3>M.S. Computer Science — Accelerated</h3>
+            <p>UCF CECS Accelerated B.S.-to-M.S. track for exceptional students · 4.0 GPA · Completed in 1 year.</p>
+          </div>
+        </div>
+        <div class="timeline-item scroll-reveal" data-direction="right">
+          <div class="timeline-marker"></div>
+          <div class="timeline-content">
+            <!-- <span class="timeline-date">2024–Present</span> -->
+            <h3>Ph.D. in Computer Science</h3>
+            <p>UCF · Research in Computer Vision, Robotics, Deep Learning & LLMs · Advisor: Dr. Ladislau Bölöni · CSRI Recipient.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-full scroll-reveal">
+        <p>
+          I am a graduate researcher in Computer Science at the
+          <strong>University of Central Florida</strong>, working in
+          <strong>Dr. Ladislau Bölöni's</strong> lab. My research sits at
+          the intersection of robotics, computer vision, and deep learning.
+        </p>
+        <p>
+          My focus is on <em>robotic perception and manipulation</em> —
+          giving robots the ability to see, understand, and interact with
+          the world using computer vision and large language models. I'm
+          particularly interested in how visual sensing can replace or
+          augment traditional robot sensors, enabling more capable and
+          adaptable systems that work in unstructured, real-world
+          environments.
+        </p>
+        <p>
+          My current research explores how deep learning architectures —
+          from CNNs and Vision Transformers to variational autoencoders
+          and multi-view fusion strategies — can extract meaningful
+          representations from camera images for robot state estimation,
+          sim-to-real transfer, and autonomous decision-making.
+        </p>
+
+        <h3 class="about-sub"><svg class="about-icon" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="4" r="2"><animate attributeName="cy" values="4;3;4" dur="1.5s" repeatCount="indefinite"/></circle><path d="M13 7l-3 5h4l-3 5"><animate attributeName="d" values="M13 7l-3 5h4l-3 5;M14 7l-3 5h4l-3 5;M13 7l-3 5h4l-3 5" dur="0.8s" repeatCount="indefinite"/></path><path d="M7 21l3-5 3 2 4-7"><animateTransform attributeName="transform" type="translate" values="0 0;1 -1;0 0" dur="0.8s" repeatCount="indefinite"/></path></svg> Not-So-Nerdy Stuff</h3>
+        <p>
+          Outside the lab, I'm an avid steep-incline runner. My best PR was
+          a 26-month stretch where I logged <strong>6,044 miles</strong> and
+          climbed about <strong>10,428,000 ft</strong> of elevation.
+          I love learning new languages — currently working on Spanish as my
+          fourth. Outside of work, academia, and running shoes, you'll find me
+          hiking, traveling, experimenting with photography, and occasionally
+          putting paint on some leftover blank paper.
+        </p>
+
+        <h3 class="about-sub"><svg class="about-icon" viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z" fill="rgba(255,183,3,.15)"><animate attributeName="fill" values="rgba(255,183,3,.08);rgba(255,183,3,.25);rgba(255,183,3,.08)" dur="2s" repeatCount="indefinite"/></path><animateTransform attributeName="transform" type="rotate" values="0 12 12;8 12 12;0 12 12;-8 12 12;0 12 12" dur="3s" repeatCount="indefinite"/></svg> STEM Outreach</h3>
+        <p>
+          I have volunteered for three consecutive years (2023–2026) at UCF's
+          <strong>Camp Connect</strong> and <strong>STEM Day</strong> events,
+          organizing hands-on workshops and interactive demonstrations to introduce
+          K–12 students to computer science, robotics, and AI. I actively mentor and
+          encourage young learners — especially young girls — to explore STEM fields,
+          serving as a role model to help break down barriers and gender stereotypes
+          in technology.
+        </p>
+      </div>
+
+      <!-- Honors & Awards -->
+      <div class="honors-block">
+        <h3 class="about-sub"><svg class="about-icon" viewBox="0 0 24 24" fill="none" stroke="var(--pink)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0012 0V4H6v5z" fill="rgba(247,37,133,.1)"><animate attributeName="fill" values="rgba(247,37,133,.06);rgba(247,37,133,.18);rgba(247,37,133,.06)" dur="2.5s" repeatCount="indefinite"/></path><path d="M12 15v4"/><path d="M8 21h8"/><path d="M6 4H4a1 1 0 00-1 1v1a4 4 0 004 4"/><path d="M18 4h2a1 1 0 011 1v1a4 4 0 01-4 4"/><animateTransform attributeName="transform" type="scale" values="1;1.04;1" dur="2s" repeatCount="indefinite" additive="sum"/></svg> Honors &amp; Awards</h3>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">National Rank #16 / 150,000+</div>
+          <div class="honor-issuer">Iran National University Entrance Exam (Konkur)</div>
+          <p class="honor-desc">Achieved at age 17, one full year ahead of the standard cohort.</p>
+        </div>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">Accelerated B.S.-to-M.S. Program in Computer Science</div>
+          <div class="honor-issuer">University of Central Florida</div>
+          <p class="honor-desc">CECS Accelerated program for high-achieving students, allowing simultaneous completion of B.S. and M.S. degrees.</p>
+        </div>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">President's Honor Roll — All Semesters</div>
+          <div class="honor-issuer">University of Central Florida</div>
+          <p class="honor-desc">Perfect 4.0 grade point average every semester attended.</p>
+        </div>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">CS Research Incentive (CSRI) Recipient</div>
+          <div class="honor-issuer">UCF Department of Computer Science</div>
+        </div>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">5,376+ Trained Deep Learning Models</div>
+          <div class="honor-issuer">Largest Known Benchmarking Study for Visual Proprioception</div>
+        </div>
+        <div class="honor-card tilt-card scroll-reveal">
+          <div class="honor-title">First-of-Its-Kind Research</div>
+          <div class="honor-issuer">Multi-view Robot Proprioception with Asymmetric Camera Positions</div>
+          <p class="honor-desc">First research in robotic proprioception to deploy spatial fusion strategies for fusing asymmetric camera views.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  </section>
+
+  <!-- ═══ ENCODER PIPELINE DIAGRAM ═══ -->
+  <div class="pipeline-divider" aria-hidden="true">
+    <svg class="pipeline-svg" viewBox="0 0 900 160" xmlns="http://www.w3.org/2000/svg">
+      <!-- Image input -->
+      <rect x="20" y="40" width="90" height="70" rx="4" fill="#0a1020" stroke="#4CC9F0" stroke-width="1.2"/>
+      <text x="65" y="30" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#5a7090" letter-spacing="1">RGB IMAGE</text>
+      <!-- Pixel grid inside -->
+      <g opacity=".4">
+        <rect x="28" y="48" width="10" height="10" fill="#F72585" rx="1"><animate attributeName="opacity" values=".3;.8;.3" dur="2s" repeatCount="indefinite"/></rect>
+        <rect x="42" y="48" width="10" height="10" fill="#4CC9F0" rx="1"><animate attributeName="opacity" values=".5;.9;.5" dur="2.3s" repeatCount="indefinite"/></rect>
+        <rect x="56" y="48" width="10" height="10" fill="#06D6A0" rx="1"><animate attributeName="opacity" values=".4;.7;.4" dur="1.8s" repeatCount="indefinite"/></rect>
+        <rect x="70" y="48" width="10" height="10" fill="#FFB703" rx="1"><animate attributeName="opacity" values=".6;.9;.6" dur="2.1s" repeatCount="indefinite"/></rect>
+        <rect x="84" y="48" width="10" height="10" fill="#8338EC" rx="1"><animate attributeName="opacity" values=".3;.6;.3" dur="1.9s" repeatCount="indefinite"/></rect>
+        <rect x="28" y="62" width="10" height="10" fill="#FFB703" rx="1"/><rect x="42" y="62" width="10" height="10" fill="#F72585" rx="1"/>
+        <rect x="56" y="62" width="10" height="10" fill="#8338EC" rx="1"/><rect x="70" y="62" width="10" height="10" fill="#4CC9F0" rx="1"/>
+        <rect x="84" y="62" width="10" height="10" fill="#06D6A0" rx="1"/>
+        <rect x="28" y="76" width="10" height="10" fill="#06D6A0" rx="1"/><rect x="42" y="76" width="10" height="10" fill="#FFB703" rx="1"/>
+        <rect x="56" y="76" width="10" height="10" fill="#4CC9F0" rx="1"/><rect x="70" y="76" width="10" height="10" fill="#F72585" rx="1"/>
+        <rect x="84" y="76" width="10" height="10" fill="#8338EC" rx="1"/>
+      </g>
+
+      <!-- Arrow 1 -->
+      <line x1="118" y1="75" x2="168" y2="75" stroke="#1a3a6a" stroke-width="1.5" stroke-dasharray="4 3">
+        <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <polygon points="168,70 178,75 168,80" fill="#4CC9F0" opacity=".6"/>
+
+      <!-- Encoder block -->
+      <rect x="185" y="30" width="140" height="80" rx="6" fill="#0a1020" stroke="#F72585" stroke-width="1.5"/>
+      <text x="255" y="22" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#F72585" letter-spacing="1">ENCODER</text>
+      <!-- Encoder layers -->
+      <rect x="200" y="45" width="20" height="50" rx="2" fill="rgba(247,37,133,.1)" stroke="#F72585" stroke-width=".8">
+        <animate attributeName="height" values="50;42;50" dur="3s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="228" y="48" width="20" height="44" rx="2" fill="rgba(76,201,240,.1)" stroke="#4CC9F0" stroke-width=".8">
+        <animate attributeName="height" values="44;50;44" dur="2.5s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="256" y="52" width="20" height="36" rx="2" fill="rgba(6,214,160,.1)" stroke="#06D6A0" stroke-width=".8">
+        <animate attributeName="height" values="36;28;36" dur="2.8s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="284" y="56" width="20" height="28" rx="2" fill="rgba(255,183,3,.1)" stroke="#FFB703" stroke-width=".8">
+        <animate attributeName="height" values="28;36;28" dur="2.2s" repeatCount="indefinite"/>
+      </rect>
+      <!-- Architecture labels cycling -->
+      <text x="255" y="125" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">
+        <animate attributeName="opacity" values="1;0;0;0;0;0;1" dur="9s" repeatCount="indefinite"/>ViT
+      </text>
+      <text x="255" y="125" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">
+        <animate attributeName="opacity" values="0;0;1;0;0;0;0" dur="9s" repeatCount="indefinite"/>ResNet-50
+      </text>
+      <text x="255" y="125" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">
+        <animate attributeName="opacity" values="0;0;0;0;1;0;0" dur="9s" repeatCount="indefinite"/>Conv-VAE
+      </text>
+
+      <!-- Arrow 2 -->
+      <line x1="332" y1="75" x2="382" y2="75" stroke="#1a3a6a" stroke-width="1.5" stroke-dasharray="4 3">
+        <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <polygon points="382,70 392,75 382,80" fill="#06D6A0" opacity=".6"/>
+
+      <!-- Latent vector -->
+      <rect x="398" y="45" width="80" height="60" rx="4" fill="#0a1020" stroke="#06D6A0" stroke-width="1.2"/>
+      <text x="438" y="37" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#06D6A0" letter-spacing="1">LATENT z</text>
+      <!-- Latent dots -->
+      <circle cx="418" cy="62" r="3" fill="#06D6A0" opacity=".5"><animate attributeName="r" values="3;4.5;3" dur="1.5s" repeatCount="indefinite"/></circle>
+      <circle cx="438" cy="62" r="3" fill="#4CC9F0" opacity=".5"><animate attributeName="r" values="3;4;3" dur="1.8s" repeatCount="indefinite"/></circle>
+      <circle cx="458" cy="62" r="3" fill="#F72585" opacity=".5"><animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite"/></circle>
+      <circle cx="418" cy="82" r="3" fill="#FFB703" opacity=".5"><animate attributeName="r" values="3;4.5;3" dur="1.7s" repeatCount="indefinite"/></circle>
+      <circle cx="438" cy="82" r="3" fill="#8338EC" opacity=".5"><animate attributeName="r" values="3;4;3" dur="2.2s" repeatCount="indefinite"/></circle>
+      <circle cx="458" cy="82" r="3" fill="#06D6A0" opacity=".5"><animate attributeName="r" values="3;5;3" dur="1.4s" repeatCount="indefinite"/></circle>
+
+      <!-- Arrow 3 -->
+      <line x1="484" y1="75" x2="534" y2="75" stroke="#1a3a6a" stroke-width="1.5" stroke-dasharray="4 3">
+        <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <polygon points="534,70 544,75 534,80" fill="#FFB703" opacity=".6"/>
+
+      <!-- Regressor -->
+      <rect x="550" y="40" width="100" height="70" rx="4" fill="#0a1020" stroke="#FFB703" stroke-width="1.2"/>
+      <text x="600" y="32" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#FFB703" letter-spacing="1">REGRESSOR</text>
+      <!-- MLP layers -->
+      <circle cx="575" cy="60" r="4" fill="rgba(255,183,3,.15)" stroke="#FFB703" stroke-width=".8"/>
+      <circle cx="575" cy="75" r="4" fill="rgba(255,183,3,.15)" stroke="#FFB703" stroke-width=".8"/>
+      <circle cx="575" cy="90" r="4" fill="rgba(255,183,3,.15)" stroke="#FFB703" stroke-width=".8"/>
+      <circle cx="625" cy="67" r="4" fill="rgba(255,183,3,.15)" stroke="#FFB703" stroke-width=".8"/>
+      <circle cx="625" cy="82" r="4" fill="rgba(255,183,3,.15)" stroke="#FFB703" stroke-width=".8"/>
+      <line x1="579" y1="60" x2="621" y2="67" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+      <line x1="579" y1="60" x2="621" y2="82" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+      <line x1="579" y1="75" x2="621" y2="67" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+      <line x1="579" y1="75" x2="621" y2="82" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+      <line x1="579" y1="90" x2="621" y2="67" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+      <line x1="579" y1="90" x2="621" y2="82" stroke="#FFB703" stroke-width=".5" opacity=".3"/>
+
+      <!-- Arrow 4 -->
+      <line x1="656" y1="75" x2="706" y2="75" stroke="#1a3a6a" stroke-width="1.5" stroke-dasharray="4 3">
+        <animate attributeName="stroke-dashoffset" values="0;-14" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <polygon points="706,70 716,75 706,80" fill="#F72585" opacity=".6"/>
+
+      <!-- Joint angles output -->
+      <rect x="722" y="30" width="160" height="100" rx="4" fill="#0a1020" stroke="#F72585" stroke-width="1.2"/>
+      <text x="802" y="22" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#F72585" letter-spacing="1">JOINT ANGLES</text>
+      <!-- Animated angle values -->
+      <text x="740" y="55" font-family="'JetBrains Mono',monospace" font-size="10" fill="#4CC9F0">θ₁ <tspan fill="#d0daea"><animate attributeName="textContent" values="42.3°;38.7°;45.1°;42.3°" dur="4s" repeatCount="indefinite"/>42.3°</tspan></text>
+      <text x="740" y="70" font-family="'JetBrains Mono',monospace" font-size="10" fill="#06D6A0">θ₂ <tspan fill="#d0daea">78.1°</tspan></text>
+      <text x="740" y="85" font-family="'JetBrains Mono',monospace" font-size="10" fill="#FFB703">θ₃ <tspan fill="#d0daea">-12.5°</tspan></text>
+      <text x="740" y="100" font-family="'JetBrains Mono',monospace" font-size="10" fill="#F72585">θ₄ <tspan fill="#d0daea">91.0°</tspan></text>
+      <text x="740" y="115" font-family="'JetBrains Mono',monospace" font-size="10" fill="#8338EC">θ₅ <tspan fill="#d0daea">-33.8°</tspan></text>
+      <!-- Pulsing accuracy indicator -->
+      <circle cx="865" cy="115" r="5" fill="rgba(6,214,160,.2)" stroke="#06D6A0" stroke-width="1">
+        <animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/>
+        <animate attributeName="opacity" values="1;.4;1" dur="2s" repeatCount="indefinite"/>
+      </circle>
+      <text x="856" y="135" font-family="'JetBrains Mono',monospace" font-size="7" fill="#06D6A0" letter-spacing="1">LOW RMSE</text>
+
+      <!-- Overall label -->
+      <text x="450" y="155" text-anchor="middle" font-family="'Outfit',sans-serif" font-size="11" fill="#5a7090" opacity=".5">Single-Pass Visual Proprioception Pipeline</text>
+    </svg>
+  </div>
+
+  <!-- ═══ RESEARCH INTERESTS (with SVG) ═══ -->
+  <section id="research" class="section section-alt">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <h2 class="gradient-text">Research Interests</h2>
+      </div>
+
+      <div class="research-svg-wrap scroll-reveal">
+        <svg id="research-svg" viewBox="0 0 820 420" xmlns="http://www.w3.org/2000/svg"
+             role="img" aria-label="Interactive research focus constellation"></svg>
+      </div>
+
+      <div class="interest-grid">
+        <div class="int-card tilt-card scroll-reveal" style="--delay:0s">
+          <div class="int-num">01</div>
+          <h3>Visual Proprioception</h3>
+          <p>Recovering robot joint configurations from single RGB camera images using compact latent encodings.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.08s">
+          <div class="int-num">02</div>
+          <h3>Sim-to-Real Transfer</h3>
+          <p>Bridging the reality gap with domain randomization, camera-position-aware training, and encoder transfer.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.16s">
+          <div class="int-num">03</div>
+          <h3>Latent Encoders</h3>
+          <p>Comparing Conv-VAEs, VGG-19, ResNet-50, ViTs, and fiducial markers for proprioception-dedicated representations.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.24s">
+          <div class="int-num">04</div>
+          <h3>Camera Optimization</h3>
+          <p>Systematically studying how 112 camera positions affect accuracy across all encoder types and config dimensions.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.32s">
+          <div class="int-num">05</div>
+          <h3>Domain Randomization</h3>
+          <p>Evaluating how visual diversity (backgrounds, distractors, lighting, occlusions) affects robustness.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.4s">
+          <div class="int-num">06</div>
+          <h3>Robotics</h3>
+          <p>Making manipulation accessible with practical hardware, uncalibrated setups, and minimal training data.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.48s">
+          <div class="int-num">07</div>
+          <h3>Healthcare AI</h3>
+          <p>Surgical outcome prediction, medical image segmentation, and clinical data modeling with interpretable ML.</p>
+        </div>
+        <div class="int-card tilt-card scroll-reveal" style="--delay:.56s">
+          <div class="int-num">08</div>
+          <h3>Generative AI</h3>
+          <p>GANs, diffusion models, VAEs, and LLM fine-tuning (LoRA/QLoRA/PEFT) for vision and language tasks.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ ANIMATED ROBOT ARM DIVIDER ═══ -->
+  <div class="robot-divider" aria-hidden="true">
+    <svg class="robot-arm-svg" viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+      <!-- Base platform -->
+      <rect x="60" y="220" width="80" height="30" rx="4" fill="#0a1020" stroke="#1a3a6a" stroke-width="1.5"/>
+      <rect x="20" y="240" width="160" height="14" rx="3" fill="#0a1020" stroke="#1a3a6a" stroke-width="1.5"/>
+      <circle cx="100" cy="220" r="6" fill="#0a1020" stroke="#F72585" stroke-width="1.5">
+        <animate attributeName="stroke" values="#F72585;#4CC9F0;#F72585" dur="4s" repeatCount="indefinite"/>
+      </circle>
+
+      <!-- Link 1 (base to shoulder) -->
+      <g id="link1">
+        <animateTransform attributeName="transform" type="rotate" values="-20 100 220;10 100 220;-20 100 220" dur="6s" repeatCount="indefinite"/>
+        <rect x="92" y="140" width="16" height="82" rx="6" fill="#080e1a" stroke="#4CC9F0" stroke-width="1.2"/>
+        <circle cx="100" cy="140" r="8" fill="#080e1a" stroke="#4CC9F0" stroke-width="1.5"/>
+        <circle cx="100" cy="140" r="3" fill="#4CC9F0" opacity=".6">
+          <animate attributeName="opacity" values=".3;.8;.3" dur="2s" repeatCount="indefinite"/>
+        </circle>
+
+        <!-- Link 2 (shoulder to elbow) -->
+        <g id="link2">
+          <animateTransform attributeName="transform" type="rotate" values="30 100 140;-25 100 140;30 100 140" dur="5s" repeatCount="indefinite"/>
+          <rect x="92" y="68" width="16" height="74" rx="6" fill="#080e1a" stroke="#06D6A0" stroke-width="1.2"/>
+          <circle cx="100" cy="68" r="7" fill="#080e1a" stroke="#06D6A0" stroke-width="1.5"/>
+          <circle cx="100" cy="68" r="2.5" fill="#06D6A0" opacity=".6">
+            <animate attributeName="opacity" values=".3;.8;.3" dur="1.8s" repeatCount="indefinite"/>
+          </circle>
+
+          <!-- Link 3 (elbow to wrist) -->
+          <g id="link3">
+            <animateTransform attributeName="transform" type="rotate" values="-40 100 68;20 100 68;-40 100 68" dur="4.5s" repeatCount="indefinite"/>
+            <rect x="94" y="22" width="12" height="48" rx="5" fill="#080e1a" stroke="#FFB703" stroke-width="1.2"/>
+            <circle cx="100" cy="22" r="6" fill="#080e1a" stroke="#FFB703" stroke-width="1.5"/>
+            <circle cx="100" cy="22" r="2" fill="#FFB703" opacity=".6">
+              <animate attributeName="opacity" values=".3;.8;.3" dur="1.5s" repeatCount="indefinite"/>
+            </circle>
+
+            <!-- Gripper -->
+            <g id="gripper">
+              <animateTransform attributeName="transform" type="rotate" values="15 100 22;-15 100 22;15 100 22" dur="3.5s" repeatCount="indefinite"/>
+              <!-- Left finger -->
+              <line x1="94" y1="22" x2="82" y2="8" stroke="#F72585" stroke-width="2" stroke-linecap="round">
+                <animate attributeName="x2" values="82;88;82" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="y2" values="8;5;8" dur="2s" repeatCount="indefinite"/>
+              </line>
+              <!-- Right finger -->
+              <line x1="106" y1="22" x2="118" y2="8" stroke="#F72585" stroke-width="2" stroke-linecap="round">
+                <animate attributeName="x2" values="118;112;118" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="y2" values="8;5;8" dur="2s" repeatCount="indefinite"/>
+              </line>
+            </g>
+          </g>
+        </g>
+      </g>
+
+      <!-- Camera on tripod (observing the arm) -->
+      <g class="robot-camera">
+        <line x1="460" y1="160" x2="460" y2="248" stroke="#1a3a6a" stroke-width="2"/>
+        <line x1="440" y1="248" x2="480" y2="248" stroke="#1a3a6a" stroke-width="2"/>
+        <rect x="438" y="140" width="44" height="30" rx="4" fill="#0a1020" stroke="#8338EC" stroke-width="1.5"/>
+        <circle cx="460" cy="155" r="8" fill="#0a1020" stroke="#8338EC" stroke-width="1.5"/>
+        <circle cx="460" cy="155" r="3" fill="#8338EC" opacity=".7">
+          <animate attributeName="r" values="3;5;3" dur="2.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".7;.2;.7" dur="2.5s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Scan beam -->
+        <polygon points="452,155 100,80 100,180" fill="url(#scanGrad)" opacity=".06">
+          <animate attributeName="opacity" values=".03;.1;.03" dur="3s" repeatCount="indefinite"/>
+        </polygon>
+      </g>
+
+      <!-- Defs -->
+      <defs>
+        <linearGradient id="scanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#8338EC" stop-opacity="0.6"/>
+          <stop offset="100%" stop-color="#8338EC" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- Labels -->
+      <text x="100" y="270" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#5a7090" letter-spacing="2">ROBOT ARM</text>
+      <text x="460" y="270" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="9" fill="#5a7090" letter-spacing="2">RGB CAMERA</text>
+      <text x="280" y="135" text-anchor="middle" font-family="'Outfit',sans-serif" font-size="11" fill="#4CC9F0" opacity=".5">Visual Proprioception</text>
+    </svg>
+  </div>
+
+  <!-- ═══ CROSS-ROBOT TRANSFER DIAGRAM ═══ -->
+  <div class="transfer-divider" aria-hidden="true">
+    <svg class="transfer-svg" viewBox="0 0 700 220" xmlns="http://www.w3.org/2000/svg">
+      <!-- AL5D Robot -->
+      <g class="robot-node">
+        <circle cx="120" cy="110" r="50" fill="#0a1020" stroke="#4CC9F0" stroke-width="1.5"/>
+        <circle cx="120" cy="110" r="54" fill="none" stroke="#4CC9F0" stroke-width=".5" opacity=".3">
+          <animate attributeName="r" values="54;60;54" dur="3s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".3;.1;.3" dur="3s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Simplified arm -->
+        <line x1="120" y1="135" x2="120" y2="115" stroke="#4CC9F0" stroke-width="3" stroke-linecap="round"/>
+        <line x1="120" y1="115" x2="105" y2="95" stroke="#4CC9F0" stroke-width="2.5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" values="0 120 115;15 120 115;0 120 115" dur="4s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="120" cy="115" r="2.5" fill="#4CC9F0"/>
+        <text x="120" y="175" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" fill="#4CC9F0" font-weight="600">AL5D</text>
+        <text x="120" y="190" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">6-DOF · Low-Cost</text>
+      </g>
+
+      <!-- Franka Robot -->
+      <g class="robot-node">
+        <circle cx="350" cy="110" r="50" fill="#0a1020" stroke="#06D6A0" stroke-width="1.5"/>
+        <circle cx="350" cy="110" r="54" fill="none" stroke="#06D6A0" stroke-width=".5" opacity=".3">
+          <animate attributeName="r" values="54;60;54" dur="3.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".3;.1;.3" dur="3.5s" repeatCount="indefinite"/>
+        </circle>
+        <!-- 7-DOF arm -->
+        <line x1="350" y1="135" x2="350" y2="118" stroke="#06D6A0" stroke-width="3" stroke-linecap="round"/>
+        <line x1="350" y1="118" x2="340" y2="100" stroke="#06D6A0" stroke-width="2.5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" values="0 350 118;-12 350 118;0 350 118" dur="3.5s" repeatCount="indefinite"/>
+        </line>
+        <line x1="340" y1="100" x2="335" y2="85" stroke="#06D6A0" stroke-width="2" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" values="0 340 100;10 340 100;0 340 100" dur="4.2s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="350" cy="118" r="2.5" fill="#06D6A0"/>
+        <text x="350" y="175" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" fill="#06D6A0" font-weight="600">FRANKA</text>
+        <text x="350" y="190" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">7-DOF · Precision</text>
+      </g>
+
+      <!-- Unitree G1 -->
+      <g class="robot-node">
+        <circle cx="580" cy="110" r="50" fill="#0a1020" stroke="#F72585" stroke-width="1.5"/>
+        <circle cx="580" cy="110" r="54" fill="none" stroke="#F72585" stroke-width=".5" opacity=".3">
+          <animate attributeName="r" values="54;60;54" dur="2.8s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values=".3;.1;.3" dur="2.8s" repeatCount="indefinite"/>
+        </circle>
+        <!-- Humanoid silhouette -->
+        <circle cx="580" cy="85" r="6" fill="none" stroke="#F72585" stroke-width="1.5"/>
+        <line x1="580" y1="91" x2="580" y2="115" stroke="#F72585" stroke-width="2" stroke-linecap="round"/>
+        <line x1="580" y1="98" x2="568" y2="108" stroke="#F72585" stroke-width="1.5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" values="0 580 98;-10 580 98;0 580 98" dur="3s" repeatCount="indefinite"/>
+        </line>
+        <line x1="580" y1="98" x2="592" y2="108" stroke="#F72585" stroke-width="1.5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" values="0 580 98;10 580 98;0 580 98" dur="3.3s" repeatCount="indefinite"/>
+        </line>
+        <circle cx="580" cy="98" r="2" fill="#F72585"/>
+        <text x="580" y="175" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11" fill="#F72585" font-weight="600">UNITREE G1</text>
+        <text x="580" y="190" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="8" fill="#5a7090" letter-spacing="1">7-DOF · Humanoid</text>
+      </g>
+
+      <!-- Transfer arcs -->
+      <!-- AL5D → Franka -->
+      <path d="M170,90 Q235,40 300,90" fill="none" stroke="#FFB703" stroke-width="1.2" stroke-dasharray="5 4" opacity=".5">
+        <animate attributeName="stroke-dashoffset" values="0;-18" dur="2s" repeatCount="indefinite"/>
+      </path>
+      <text x="235" y="52" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="7" fill="#FFB703" opacity=".6">TRANSFER</text>
+
+      <!-- Franka → G1 -->
+      <path d="M400,90 Q465,40 530,90" fill="none" stroke="#8338EC" stroke-width="1.2" stroke-dasharray="5 4" opacity=".5">
+        <animate attributeName="stroke-dashoffset" values="0;-18" dur="2s" repeatCount="indefinite"/>
+      </path>
+      <text x="465" y="52" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="7" fill="#8338EC" opacity=".6">TRANSFER</text>
+
+      <!-- AL5D → G1 (bottom arc) -->
+      <path d="M170,135 Q350,210 530,135" fill="none" stroke="#4ECDC4" stroke-width="1.2" stroke-dasharray="5 4" opacity=".4">
+        <animate attributeName="stroke-dashoffset" values="0;-18" dur="2.5s" repeatCount="indefinite"/>
+      </path>
+      <text x="350" y="210" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="7" fill="#4ECDC4" opacity=".5">CROSS-PLATFORM TRANSFER</text>
+
+      <!-- Title -->
+      <text x="350" y="15" text-anchor="middle" font-family="'Outfit',sans-serif" font-size="11" fill="#5a7090" opacity=".5">Cross-Robot Encoder Generalization</text>
+    </svg>
+  </div>
+
+  <!-- ═══ HEALTHCARE AI RESEARCH ═══ -->
+  <section id="healthcare" class="section">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">03</span>
+        <h2 class="gradient-text">Healthcare AI Research</h2>
+      </div>
+      <div class="healthcare-header scroll-reveal">
+        <div class="healthcare-badge">
+          <span class="hc-institution">Cedars-Sinai Medical Center</span>
+          <span class="hc-dept">Department of Neurosurgery</span>
+          <span class="hc-pi">PI: Ladislau Bölöni and Dr. Moise Danielpour, MD - Director Pediatric Neurosurgery Program at Cedars-Sinai Medical Center · Ongoing</span>
+        </div>
+      </div>
+      <div class="healthcare-grid">
+        <div class="hc-card tilt-card scroll-reveal" style="--delay:0s">
+          <div class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.3" width="36" height="36"><path d="M12 2a7 7 0 00-5 11.9V22h10v-8.1A7 7 0 0012 2z" fill="rgba(6,214,160,.08)"/><path d="M9 10c0-1 .5-2 1.5-2s1.5 1 1.5 2"/><path d="M12 10c0-1 .5-2 1.5-2s1.5 1 1.5 2"/><circle cx="12" cy="8" r="0.5" fill="var(--green)"><animate attributeName="r" values="0.5;1.2;0.5" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite"/></circle></svg></div>
+          <h3>Surgical Outcome Prediction</h3>
+          <p>Designing ML architectures (XGBoost, DNNs, Temporal Transformers, LSTMs/GRUs, Mamba) to predict operative duration and 30-day hospital readmissions across ~20,000 neurosurgical cases.</p>
+        </div>
+        <div class="hc-card tilt-card scroll-reveal" style="--delay:.1s">
+          <div class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.3" width="36" height="36"><circle cx="12" cy="8" r="4"/><path d="M12 12v6"/><path d="M8 21h8"/><path d="M7 18h10"/><circle cx="12" cy="8" r="1.5" fill="rgba(76,201,240,.15)"><animate attributeName="r" values="1.5;3;1.5" dur="3s" repeatCount="indefinite"/><animate attributeName="opacity" values=".3;.08;.3" dur="3s" repeatCount="indefinite"/></circle></svg></div>
+          <h3>Model Interpretability</h3>
+          <p>Applying SHAP/LIME-based interpretability to isolate surgeon-specific vs. patient frailty factors; integrating ICD-9/10, CPT codes, FHIR-structured data, and social determinants of health.</p>
+        </div>
+        <div class="hc-card tilt-card scroll-reveal" style="--delay:.2s">
+          <div class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.3" width="36" height="36"><rect x="4" y="2" rx="2" width="16" height="20" fill="rgba(131,56,236,.06)"/><path d="M12 6v6M9 9h6M10 12l-2 4M14 12l2 4M10 16h4"><animate attributeName="opacity" values="1;.5;1" dur="2.5s" repeatCount="indefinite"/></path></svg></div>
+          <h3>Medical Image Segmentation</h3>
+          <p>Validating SAM alongside U-Net/3D U-Net and DeepLab baselines for automated volumetric segmentation of the foramen magnum and spinal canal on MRI/CT imaging data.</p>
+        </div>
+        <div class="hc-card tilt-card scroll-reveal" style="--delay:.3s">
+          <div class="hc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--yellow)" stroke-width="1.3" width="36" height="36"><rect x="3" y="12" width="4" height="8" rx="1" fill="rgba(255,183,3,.1)"><animate attributeName="height" values="8;10;8" dur="2s" repeatCount="indefinite"/><animate attributeName="y" values="12;10;12" dur="2s" repeatCount="indefinite"/></rect><rect x="10" y="6" width="4" height="14" rx="1" fill="rgba(255,183,3,.1)"><animate attributeName="height" values="14;12;14" dur="2.3s" repeatCount="indefinite"/><animate attributeName="y" values="6;8;6" dur="2.3s" repeatCount="indefinite"/></rect><rect x="17" y="9" width="4" height="11" rx="1" fill="rgba(255,183,3,.1)"><animate attributeName="height" values="11;13;11" dur="1.8s" repeatCount="indefinite"/><animate attributeName="y" values="9;7;9" dur="1.8s" repeatCount="indefinite"/></rect></svg></div>
+          <h3>Clinical Benchmarking</h3>
+          <p>Benchmarking AI-generated measurements against expert neurosurgeon annotations; evaluating vision-based feature extraction for few-shot medical image classification.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ INTERACTIVE VISUALIZATIONS ═══ -->
+  <section id="viz" class="section section-alt">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">04</span>
+        <h2 class="gradient-text">Interactive Visualizations</h2>
+      </div>
+      <p class="section-desc scroll-reveal">
+        These are real visualization tools built for our papers and research.
+        <br>Click <strong>"Interact with 3D"</strong> to drag, rotate, and hover for data. Click the title to go fullscreen.
+      </p>
+
+      <!-- Filter tabs -->
+      <div class="viz-filters scroll-reveal" id="viz-filters">
+        <button class="viz-filter active magnetic" data-filter="all" data-strength="6">All</button>
+        <button class="viz-filter magnetic" data-filter="3d" data-strength="6">3D Scenes</button>
+        <button class="viz-filter magnetic" data-filter="chart" data-strength="6">Charts</button>
+        <button class="viz-filter magnetic" data-filter="robot" data-strength="6">Per-Robot</button>
+        <button class="viz-filter magnetic" data-filter="transfer" data-strength="6">Transfer</button>
+      </div>
+
+      <div class="viz-grid" id="viz-grid">
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/hero_armillary.html" data-title="Armillary Sphere" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/hero_armillary.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Armillary Sphere</h3><p>9 encoder orbits · 112 camera nodes · RMSE → radius &amp; glow</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/battle_arena.html" data-title="Battle Arena" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/battle_arena.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Battle Arena</h3><p>Single-view vs Multi-view — head-to-head RMSE comparison</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card wide" data-viz="assets/viz/hero_manhattan.html" data-title="Manhattan Skyline" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/hero_manhattan.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Manhattan Skyline</h3><p>3D bar chart — model errors across Base, White, DR, Box, BoxBg, Bg, Real</p><span class="viz-tech">Plotly.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/sensory_dome.html" data-title="Sensory Dome" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/sensory_dome.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Sensory Dome</h3><p>RMSE mapped to 112 camera coordinates on a 3D hemisphere</p><span class="viz-tech">Canvas 2D</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/proprioception_orbiter_real.html" data-title="Proprioception Orbiter" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/proprioception_orbiter_real.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Proprioception Orbiter</h3><p>Persistent trajectories · Real-world model comparison</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/hero_terrain.html" data-title="Error Terrain" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/hero_terrain.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Error Terrain</h3><p>3D topographic surface — altitude encodes RMSE</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/joint_heatmap.html" data-title="Joint Heatmap" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/joint_heatmap.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Joint Heatmap</h3><p>DOF error thermal view across camera positions</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/hero_heatgrid.html" data-title="RMSE Heatgrid" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/hero_heatgrid.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>RMSE Heatgrid</h3><p>9 encoders × 112 cameras — every cell is one trained model</p><span class="viz-tech">Canvas 2D</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/interactive_smooth_hemisphere.html" data-title="Smooth Hemisphere" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/interactive_smooth_hemisphere.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Smooth Hemisphere</h3><p>Interactive interpolated accuracy surface</p><span class="viz-tech">Plotly.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/constellation.html" data-title="Constellation" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/constellation.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Constellation</h3><p>Network graph of encoder-camera error correlations</p><span class="viz-tech">D3.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/bump_chart.html" data-title="Bump Chart" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/bump_chart.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Bump Chart</h3><p>Encoder rankings across domain randomization conditions</p><span class="viz-tech">D3.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/dataset_radar.html" data-title="Dataset Radar" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/dataset_radar.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Dataset Radar</h3><p>Multi-axis radar comparing dataset characteristics</p><span class="viz-tech">Chart.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/heatmap.html" data-title="Heatmap" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/heatmap.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Heatmap</h3><p>Encoder × environment error heatmap</p><span class="viz-tech">Canvas 2D</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/leaderboard.html" data-title="Leaderboard" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/leaderboard.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Leaderboard</h3><p>Ranked model performance across all configurations</p><span class="viz-tech">Interactive Table</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/model_showcase.html" data-title="Model Showcase" data-cat="3d">
+          <div class="viz-preview"><iframe src="assets/viz/model_showcase.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Model Showcase</h3><p>Interactive comparison of model architectures</p><span class="viz-tech">Three.js</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <div class="viz-card tilt-card" data-viz="assets/viz/summary.html" data-title="Summary Dashboard" data-cat="chart">
+          <div class="viz-preview"><iframe src="assets/viz/summary.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar">
+            <div class="viz-info"><h3>Summary Dashboard</h3><p>Aggregate results overview</p><span class="viz-tech">Multi-Chart</span></div>
+            <button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact with 3D</span></button>
+          </div>
+        </div>
+
+        <!-- Per-Robot -->
+        <div class="viz-card tilt-card" data-viz="assets/viz/manhattan_AL5D.html" data-title="Manhattan — AL5D" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/manhattan_AL5D.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Manhattan — AL5D</h3><p>Error landscape for 6-DOF low-cost arm</p><span class="viz-tech">Plotly.js</span><span class="viz-robot-tag">AL5D</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/spider_AL5D.html" data-title="Spider — AL5D" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/spider_AL5D.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Spider — AL5D</h3><p>Per-joint radar profile</p><span class="viz-tech">Chart.js</span><span class="viz-robot-tag">AL5D</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/tracking_AL5D.html" data-title="Tracking — AL5D" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/tracking_AL5D.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Tracking — AL5D</h3><p>Predicted vs ground-truth joint trajectories</p><span class="viz-tech">D3.js</span><span class="viz-robot-tag">AL5D</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/manhattan_Franka_Panda.html" data-title="Manhattan — Franka" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/manhattan_Franka_Panda.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Manhattan — Franka</h3><p>Error landscape for 7-DOF Franka arm</p><span class="viz-tech">Plotly.js</span><span class="viz-robot-tag">Franka</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/spider_Franka_Panda.html" data-title="Spider — Franka" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/spider_Franka_Panda.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Spider — Franka</h3><p>Per-joint radar profile</p><span class="viz-tech">Chart.js</span><span class="viz-robot-tag">Franka</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/tracking_Franka_Panda.html" data-title="Tracking — Franka" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/tracking_Franka_Panda.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Tracking — Franka</h3><p>Predicted vs ground-truth trajectories</p><span class="viz-tech">D3.js</span><span class="viz-robot-tag">Franka</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/manhattan_Unitree_G1.html" data-title="Manhattan — G1" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/manhattan_Unitree_G1.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Manhattan — G1</h3><p>Error landscape for humanoid G1 arm</p><span class="viz-tech">Plotly.js</span><span class="viz-robot-tag">G1</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/spider_Unitree_G1.html" data-title="Spider — G1" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/spider_Unitree_G1.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Spider — G1</h3><p>Per-joint radar for Unitree G1 humanoid</p><span class="viz-tech">Chart.js</span><span class="viz-robot-tag">G1</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/tracking_Unitree_G1.html" data-title="Tracking — G1" data-cat="robot">
+          <div class="viz-preview"><iframe src="assets/viz/tracking_Unitree_G1.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Tracking — G1</h3><p>Predicted vs ground-truth trajectories</p><span class="viz-tech">D3.js</span><span class="viz-robot-tag">G1</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+
+        <!-- Transfer -->
+        <div class="viz-card tilt-card" data-viz="assets/viz/transfer_cost.html" data-title="Transfer Cost" data-cat="transfer">
+          <div class="viz-preview"><iframe src="assets/viz/transfer_cost.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Transfer Cost</h3><p>Cross-robot transfer efficiency tradeoff</p><span class="viz-tech">D3.js</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+        <div class="viz-card tilt-card" data-viz="assets/viz/transfer_globe.html" data-title="Transfer Globe" data-cat="transfer 3d">
+          <div class="viz-preview"><iframe src="assets/viz/transfer_globe.html" loading="lazy" tabindex="-1"></iframe><div class="viz-glass"></div></div>
+          <div class="viz-bar"><div class="viz-info"><h3>Transfer Globe</h3><p>3D globe mapping cross-robot encoder transfer</p><span class="viz-tech">Three.js</span></div><button class="viz-interact-btn magnetic" data-strength="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 15l-2 5L9 9l11 4-5 2z"/><path d="M22 22l-5-10"/></svg><span>Interact</span></button></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Lightbox -->
+  <div id="viz-lightbox" class="viz-lightbox">
+    <div class="viz-lightbox-backdrop" id="viz-lightbox-backdrop"></div>
+    <div class="viz-lightbox-panel">
+      <div class="viz-lightbox-bar">
+        <span id="viz-lightbox-title" class="viz-lightbox-title"></span>
+        <span class="viz-lightbox-hint">Drag to rotate · Hover for data · ESC to close</span>
+        <button id="viz-lightbox-close" class="viz-lightbox-close" aria-label="Close">&times;</button>
+      </div>
+      <iframe id="viz-lightbox-frame" class="viz-lightbox-frame"></iframe>
+    </div>
+  </div>
+
+  <!-- Fullscreen modal -->
+  <div id="viz-modal" class="viz-modal">
+    <div class="viz-modal-bar">
+      <span id="viz-modal-title" class="viz-modal-title"></span>
+      <button id="viz-modal-close" class="viz-modal-close" aria-label="Close">&times;</button>
+    </div>
+    <iframe id="viz-modal-frame" class="viz-modal-frame"></iframe>
+  </div>
+
+  <!-- ═══ PUBLICATIONS ═══ -->
+  <section id="publications" class="section">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">05</span>
+        <h2 class="gradient-text">Publications</h2>
+      </div>
+      <p class="section-desc scroll-reveal">
+        Conference and workshop papers on visual proprioception, sim-to-real transfer, and cross-robot generalization.
+      </p>
+      <div id="pub-list" class="pub-list">
+        <div class="pub-loading">Loading publications…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ TECHNICAL SKILLS ═══ -->
+  <section id="skills" class="section section-alt">
+    <div class="section-inner">
+      <div class="section-head">
+        <span class="section-num">06</span>
+        <h2 class="gradient-text">Technical Skills</h2>
+      </div>
+      <div class="skills-grid">
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:0s">
+          <h3>Languages</h3>
+          <div class="skill-tags"><span>Python</span><span>R</span><span>Java</span><span>C</span><span>SQL</span><span>Bash</span><span>CUDA</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.06s">
+          <h3>Deep Learning</h3>
+          <div class="skill-tags"><span>PyTorch</span><span>TensorFlow</span><span>scikit-learn</span><span>Hugging Face</span><span>OpenCV</span><span>SHAP</span><span>LIME</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.12s">
+          <h3>Generative AI</h3>
+          <div class="skill-tags"><span>CycleGAN</span><span>StyleGAN</span><span>WGAN</span><span>DDPM</span><span>Stable Diffusion</span><span>ControlNet</span><span>VAEs</span><span>CLIP</span><span>LLaVA</span><span>DINOv2</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.18s">
+          <h3>LLM / NLP</h3>
+          <div class="skill-tags"><span>GPT-4/4o</span><span>LLaMA 2/3</span><span>BERT</span><span>RoBERTa</span><span>LoRA/QLoRA/PEFT</span><span>RAG</span><span>SpaCy</span><span>NER</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.24s">
+          <h3>Vision</h3>
+          <div class="skill-tags"><span>ViT</span><span>Swin</span><span>DINOv2</span><span>ConvNeXt</span><span>EfficientNet</span><span>DenseNet</span><span>ResNet</span><span>VGG-19</span><span>MobileNet</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.3s">
+          <h3>Detection / Segmentation</h3>
+          <div class="skill-tags"><span>YOLO v5/v8</span><span>DETR</span><span>Faster R-CNN</span><span>Mask R-CNN</span><span>DeepLab</span><span>SAM/SAM 2</span><span>U-Net/3D U-Net</span><span>V-Net</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.36s">
+          <h3>3D / Spatial</h3>
+          <div class="skill-tags"><span>NeRFs</span><span>3D Gaussian Splatting</span><span>Multi-View Geometry</span><span>Sim-to-Real</span><span>Domain Randomization</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.42s">
+          <h3>Cloud / MLOps</h3>
+          <div class="skill-tags"><span>Docker</span><span>MLflow</span><span>Weights & Biases</span><span>Git</span></div>
+        </div>
+        <div class="skill-group tilt-card scroll-reveal" style="--delay:.48s">
+          <h3>Visualization</h3>
+          <div class="skill-tags"><span>Plotly</span><span>Three.js</span><span>D3.js</span><span>Matplotlib</span><span>Seaborn</span><span>Tableau</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ CONTACT ═══ -->
+  <section id="contact" class="section">
+    <div class="section-inner section-center">
+      <div class="section-head">
+        <span class="section-num">07</span>
+        <h2 class="gradient-text">Contact</h2>
+      </div>
+      <p class="section-desc center scroll-reveal">Interested in computer vision, robotics, or LLMs?</p>
+      <div class="contact-grid">
+        <a href="/cdn-cgi/l/email-protection#d6a5b7beb7a4f8a5beb3bfbdbeb9bab3a5bab7bbbf96a3b5b0f8b3b2a3" class="contact-card tilt-card magnetic scroll-reveal" data-strength="8">
+          <span class="cc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 4L12 13 2 4"/></svg></span>
+          <span class="cc-label">Email</span>
+          <span class="cc-val"><span class="__cf_email__" data-cfemail="f586949d9487db869d909c9e9d9a9990869994989cb5809693db909180">[email&#160;protected]</span></span>
+        </a>
+        <a href="https://www.linkedin.com/in/sahara-sheik/" target="_blank" class="contact-card tilt-card magnetic scroll-reveal" data-strength="8">
+          <span class="cc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg></span>
+          <span class="cc-label">LinkedIn</span>
+          <span class="cc-val">sahara-sheik</span>
+        </a>
+      </div>
+      <p class="contact-loc scroll-reveal">University of Central Florida · Orlando, FL 32816</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Sahara Sheikholeslami · Built with Three.js, D3.js &amp; Plotly</p>
+  </footer>
+
+  <canvas id="trail-canvas"></canvas>
+  <script src="script.js"></script>
+</body>
+</html>
