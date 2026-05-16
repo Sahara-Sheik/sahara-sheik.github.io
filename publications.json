@@ -52,7 +52,7 @@
     "venue": "ICRA 2026 Workshop",
     "venueFull": "IEEE Int. Conf. on Robotics and Automation — MM-Spatial AI Workshop",
     "year": 2026,
-    "status": "Under Review",
+    "status": "Accepted",
     "type": "workshop",
     "abstract": "We investigate the generalization of visual proprioception across three very different robot configurations: a low-cost 6DOF AL5D arm, a high-precision 7DOF Franka arm, and a humanoid G1 arm with 7DOF. We evaluate whether the same encoder-regressor architecture transfers across platforms and whether pre-trained vision encoders can be reused cross-robot with only a lightweight regressor refit.",
     "tags": ["Cross-Robot Transfer", "Visual Proprioception", "Encoder Generalization", "Sim-to-Real"]
